@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../constants/app_colors.dart';
+import '../../constants/app_constants.dart';
 import '../../constants/app_typography.dart';
 
 class CustomCurvedAppBar extends StatelessWidget
@@ -55,6 +57,7 @@ class CustomCurvedAppBar extends StatelessWidget
                 _buildLogo(),
                 const SizedBox(width: 12),
               ],
+
               Expanded(
                 child: Text(
                   title,
@@ -62,6 +65,7 @@ class CustomCurvedAppBar extends StatelessWidget
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+
               if (actions != null) ...actions!,
             ],
           ),
@@ -74,27 +78,16 @@ class CustomCurvedAppBar extends StatelessWidget
     return Container(
       width: 44,
       height: 44,
+      padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        // color: Colors.white.withValues(alpha: 0.15),
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.3),
+          // color: Colors.white.withValues(alpha: 0.3),
           width: 1.5,
         ),
       ),
-      child: Center(
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: const BoxDecoration(
-            color: Color(0xFF004D40),
-            shape: BoxShape.circle,
-          ),
-          child: const Center(
-            child: Icon(Icons.eco_outlined, color: Colors.white, size: 20),
-          ),
-        ),
-      ),
+      child: Image.asset(AppConstants.appLogo, fit: BoxFit.contain),
     );
   }
 }

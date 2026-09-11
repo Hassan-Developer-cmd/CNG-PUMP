@@ -89,4 +89,16 @@ class AppTypography {
     color: AppColors.alertRedSubtitle,
     height: 1.35,
   );
+
+  static const TextStyle loginTitle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle loginSubtitle = TextStyle(
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    height: 1.4,
+  );
 }

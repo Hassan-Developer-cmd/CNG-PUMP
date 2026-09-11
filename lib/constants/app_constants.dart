@@ -2,6 +2,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'CNG Hub';
+  static const String appLogo = 'assets/images/app_logo.png';
   static const String comparisonResultTitle = 'Comparison Result';
   static const String scanMeterTitle = 'Scan Meter';
   static const String defaultUserName = 'Ali';
