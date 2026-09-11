@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_typography.dart';
 
@@ -16,18 +17,24 @@ class CorruptionAlertBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color bgColor =
-        isCorrupted ? AppColors.alertRedBg : AppColors.successGreenBg;
-    final Color borderColor =
-        isCorrupted ? AppColors.alertRedBorder : AppColors.successGreenBorder;
-    final Color iconBg =
-        isCorrupted ? AppColors.alertRedIcon : AppColors.successGreenIcon;
-    final IconData icon =
-        isCorrupted ? Icons.warning_amber_rounded : Icons.check;
-    final Color titleColor =
-        isCorrupted ? AppColors.alertRedTitle : AppColors.successGreenTitle;
-    final Color messageColor =
-        isCorrupted ? AppColors.alertRedSubtitle : AppColors.successGreenSubtitle;
+    final Color bgColor = isCorrupted
+        ? AppColors.alertRedBg
+        : AppColors.successGreenBg;
+    final Color borderColor = isCorrupted
+        ? AppColors.alertRedBorder
+        : AppColors.successGreenBorder;
+    final Color iconBg = isCorrupted
+        ? AppColors.alertRedIcon
+        : AppColors.successGreenIcon;
+    final IconData icon = isCorrupted
+        ? Icons.warning_amber_rounded
+        : Icons.check;
+    final Color titleColor = isCorrupted
+        ? AppColors.alertRedTitle
+        : AppColors.successGreenTitle;
+    final Color messageColor = isCorrupted
+        ? AppColors.alertRedSubtitle
+        : AppColors.successGreenSubtitle;
 
     return Container(
       width: double.infinity,
@@ -41,19 +48,12 @@ class CorruptionAlertBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 22,
-            ),
+            width: 36.w,
+            height: 36.h,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Icon(icon, color: Colors.white, size: 22.sp),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14.w),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,10 +62,12 @@ class CorruptionAlertBanner extends StatelessWidget {
                   title,
                   style: AppTypography.alertTitle.copyWith(color: titleColor),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4.h),
                 Text(
                   message,
-                  style: AppTypography.alertSubtitle.copyWith(color: messageColor),
+                  style: AppTypography.alertSubtitle.copyWith(
+                    color: messageColor,
+                  ),
                 ),
               ],
             ),

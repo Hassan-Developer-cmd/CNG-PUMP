@@ -1,7 +1,7 @@
 import 'package:cng_pump/constants/app_colors.dart';
 import 'package:cng_pump/constants/app_constants.dart';
 import 'package:cng_pump/constants/app_typography.dart';
-import 'package:cng_pump/screens/dashboard/dashboard_screen.dart';
+import 'package:cng_pump/screens/main_screen/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => DashboardScreen(),
+                                      builder: (context) => const MainScreen(),
                                     ),
                                   );
                                 },

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CameraControlBar extends StatelessWidget {
   final VoidCallback onCapture;
@@ -17,49 +18,49 @@ class CameraControlBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 120,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      height: 120.h,
+      padding: EdgeInsets.symmetric(horizontal: 28.w),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left: Camera Switch Action or Spacer
           if (onSwitchCamera != null)
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.flip_camera_ios_outlined,
                 color: Colors.white,
-                size: 30,
+                size: 30.sp,
               ),
               tooltip: 'Switch Camera',
               onPressed: isCapturing ? null : onSwitchCamera,
             )
           else
-            const SizedBox(width: 48),
+            SizedBox(width: 48.w),
 
           // Center Shutter Button
           GestureDetector(
             onTap: isCapturing ? null : onCapture,
             child: Container(
-              width: 78,
-              height: 78,
+              width: 78.w,
+              height: 78.h,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
+                border: Border.all(color: Colors.white, width: 4.w),
               ),
               child: Center(
                 child: isCapturing
-                    ? const SizedBox(
-                        width: 32,
-                        height: 32,
+                    ? SizedBox(
+                        width: 32.w,
+                        height: 32.h,
                         child: CircularProgressIndicator(
                           color: Colors.white,
                           strokeWidth: 3,
                         ),
                       )
                     : Container(
-                        width: 62,
-                        height: 62,
-                        decoration: const BoxDecoration(
+                        width: 62.w,
+                        height: 62.h,
+                        decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
@@ -70,11 +71,7 @@ class CameraControlBar extends StatelessWidget {
 
           // Right History / Gallery Action
           IconButton(
-            icon: const Icon(
-              Icons.history,
-              color: Colors.white,
-              size: 32,
-            ),
+            icon: Icon(Icons.history, color: Colors.white, size: 32.sp),
             tooltip: 'Choose from Gallery',
             onPressed: isCapturing ? null : onHistoryOrGallery,
           ),

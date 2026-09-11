@@ -44,6 +44,30 @@ class TextComparisonProvider extends ChangeNotifier {
 
   double _toleranceThreshold = AppConstants.defaultToleranceThreshold;
 
+  // PRIMARY SOURCE MODE (Nozzle vs Meter) — controls the first card only.
+  PrimarySourceMode _primarySourceMode = PrimarySourceMode.nozzle;
+  PrimarySourceMode get primarySourceMode => _primarySourceMode;
+
+  /// Switches the first reading card between "Nozzle" (Digital Machine)
+  /// and "Meter" mode. The two represent different physical data sources,
+  /// so any previously captured image/text for that slot is cleared.
+  void setPrimarySourceMode(PrimarySourceMode mode) {
+    if (mode == _primarySourceMode) return;
+    _primarySourceMode = mode;
+
+    final primary = _cngItems[0];
+    _ocrGeneration[0]++;
+    primary.reset();
+    if (mode == PrimarySourceMode.nozzle) {
+      primary.title = AppConstants.digitalMachine;
+      primary.icon = Icons.memory;
+    } else {
+      primary.title = AppConstants.meterLabel;
+      primary.icon = Icons.speed_outlined;
+    }
+    notifyListeners();
+  }
+
   // GETTERS
   List<CngReadingItem> get readingItems => List.unmodifiable(_cngItems);
 
@@ -253,6 +277,7 @@ class TextComparisonProvider extends ChangeNotifier {
       rawManualText: manual.extractedText,
       rawMicroMotionText: micro.extractedText,
       rawSuiGasText: sui.extractedText,
+      primaryLabel: digital.title,
     );
   }
 

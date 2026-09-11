@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
@@ -184,18 +185,8 @@ class _CameraScreenState extends State<CameraScreen>
     await _startCameraController(_cameras[_selectedCameraIndex]);
   }
 
-  /// Extra margin (as a fraction of the visible scan window's own
-  /// width/height) added ONLY to the region that gets cropped and sent to
-  /// OCR. The on-screen viewfinder box the user aligns to is NOT resized —
-  /// this purely gives the OCR crop a little breathing room so digits or a
-  /// decimal point sitting right at the edge of the frame (which the user
-  /// can't perfectly judge by eye) aren't chopped off.
   static const double _ocrCropPadding = 0.22;
 
-  /// Inflates [scanWindow] by [_ocrCropPadding] on every side. This is what
-  /// actually gets cropped out of the full-resolution photo for OCR — the
-  /// visible frame drawn on screen keeps using the original [scanWindow]
-  /// unchanged.
   Rect _paddedOcrWindow(Rect scanWindow) {
     final double padX = scanWindow.width * _ocrCropPadding;
     final double padY = scanWindow.height * _ocrCropPadding;
@@ -207,9 +198,6 @@ class _CameraScreenState extends State<CameraScreen>
     );
   }
 
-  /// Crops the captured full-sensor image down to the (padded) scanner
-  /// window bounding box. Accounts for screen aspect ratio, BoxFit.cover
-  /// display scaling, and EXIF orientation.
   Future<File> _cropImageToScanWindow(
     XFile photo,
     Rect scanWindow,
@@ -301,11 +289,6 @@ class _CameraScreenState extends State<CameraScreen>
 
     try {
       final XFile photo = await _controller!.takePicture();
-      // scanWindow is the exact box the user sees and aligned to; we crop a
-      // slightly larger area around it (see _paddedOcrWindow) so the OCR
-      // service gets the full digits/decimal point even if the user's
-      // alignment was a few pixels off — without changing the size of the
-      // frame that's actually shown on screen.
       final Rect ocrWindow = _paddedOcrWindow(scanWindow);
       final File croppedFile = await _cropImageToScanWindow(
         photo,
@@ -437,15 +420,15 @@ class _CameraScreenState extends State<CameraScreen>
                         left: 8,
                         right: 8,
                         child: Container(
-                          height: 2.5,
+                          height: 2.5.h,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(2),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.cyanAccent.withValues(alpha: 0.8),
-                                blurRadius: 10,
-                                spreadRadius: 1.5,
+                                blurRadius: 10.r,
+                                spreadRadius: 1.5.r,
                               ),
                               BoxShadow(
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -475,19 +458,19 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
+                        blurRadius: 8.r,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: const Text(
+                  child: Text(
                     AppConstants.alignDisplayPrompt,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
@@ -502,26 +485,26 @@ class _CameraScreenState extends State<CameraScreen>
               children: [
                 // Top Bar with Close, Title, and Flashlight
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.close,
                           color: Colors.white,
-                          size: 28,
+                          size: 28.sp,
                         ),
                         tooltip: 'Close',
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       Text(
                         screenTitle,
-                        style: const TextStyle(
-                          fontSize: 20,
+                        style: TextStyle(
+                          fontSize: 20.sp,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -532,7 +515,7 @@ class _CameraScreenState extends State<CameraScreen>
                               ? Icons.flashlight_on
                               : Icons.flashlight_off_outlined,
                           color: Colors.white,
-                          size: 26,
+                          size: 26.sp,
                         ),
                         tooltip: 'Toggle Flashlight',
                         onPressed: (_controller?.value.isInitialized ?? false)
@@ -547,16 +530,16 @@ class _CameraScreenState extends State<CameraScreen>
                 Expanded(
                   child: Center(
                     child: _isInitializing
-                        ? const Column(
+                        ? Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               CircularProgressIndicator(color: Colors.white),
-                              SizedBox(height: 16),
+                              SizedBox(height: 16.h),
                               Text(
                                 'Starting camera...',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 14,
+                                  fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -564,25 +547,25 @@ class _CameraScreenState extends State<CameraScreen>
                           )
                         : _errorMessage != null
                         ? Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            padding: EdgeInsets.symmetric(horizontal: 32.w),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.videocam_off_outlined,
-                                  size: 54,
+                                  size: 54.sp,
                                   color: Colors.white70,
                                 ),
-                                const SizedBox(height: 16),
+                                SizedBox(height: 16.h),
                                 Text(
                                   _errorMessage!,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 14,
+                                    fontSize: 14.sp,
                                   ),
                                 ),
-                                const SizedBox(height: 20),
+                                SizedBox(height: 20.h),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -592,19 +575,17 @@ class _CameraScreenState extends State<CameraScreen>
                                         backgroundColor: AppColors.primaryTeal,
                                         foregroundColor: Colors.white,
                                       ),
-                                      icon: const Icon(Icons.refresh, size: 18),
+                                      icon: Icon(Icons.refresh, size: 18.sp),
                                       label: const Text('Retry'),
                                     ),
-                                    const SizedBox(width: 12),
+                                    SizedBox(width: 12.w),
                                     OutlinedButton.icon(
                                       onPressed: _pickFromGallery,
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.white,
-                                        side: const BorderSide(
-                                          color: Colors.white,
-                                        ),
+                                        side: BorderSide(color: Colors.white),
                                       ),
-                                      icon: const Icon(Icons.history, size: 18),
+                                      icon: Icon(Icons.history, size: 18.sp),
                                       label: const Text('Gallery'),
                                     ),
                                   ],
@@ -631,7 +612,7 @@ class _CameraScreenState extends State<CameraScreen>
           if (_isCapturing)
             Container(
               color: Colors.black.withValues(alpha: 0.6),
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -641,7 +622,7 @@ class _CameraScreenState extends State<CameraScreen>
                       'Capturing...',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 15,
+                        fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

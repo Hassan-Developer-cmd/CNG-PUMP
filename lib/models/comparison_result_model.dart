@@ -14,6 +14,10 @@ class ComparisonResultModel {
   final String rawMicroMotionText;
   final String rawSuiGasText;
 
+  /// Label for the first ("primary") reading at the time of comparison —
+  /// either "Digital Machine" (Nozzle mode) or "Meter" (Meter mode).
+  final String primaryLabel;
+
   ComparisonResultModel({
     this.digitalReading,
     this.manualReading,
@@ -26,6 +30,7 @@ class ComparisonResultModel {
     this.rawManualText = '',
     this.rawMicroMotionText = '',
     this.rawSuiGasText = '',
+    this.primaryLabel = AppConstants.digitalMachine,
   });
 
   String get formattedDigital =>

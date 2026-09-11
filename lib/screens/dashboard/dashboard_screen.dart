@@ -6,11 +6,12 @@ import '../../constants/app_constants.dart';
 import '../../providers/text_comparison_provider.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
 import '../../widgets/shared_widgets/custom_primary_button.dart';
+import '../../widgets/shared_widgets/source_selector_dropdown.dart';
 import '../../widgets/dashboard/cng_reading_card.dart';
 import '../../widgets/dashboard/info_note_card.dart';
 import '../../widgets/dashboard/user_profile_header.dart';
 import '../camera_screen/camera_screen.dart';
-import '../comparing_result/comparing_result_screen.dart';
+import '../comparing_result/comparing_data_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -32,7 +33,7 @@ class DashboardScreen extends StatelessWidget {
   void _navigateToComparison(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const ComparingResultScreen()),
+      MaterialPageRoute(builder: (context) => const ComparingDataScreen()),
     );
   }
 
@@ -68,7 +69,20 @@ class DashboardScreen extends StatelessWidget {
                 const UserProfileHeader(),
                 const SizedBox(height: 16),
 
-                // 4 Reading Cards
+                // Nozzle / Meter selector for the primary (first) card
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: SourceSelectorDropdown(
+                    selected: provider.primarySourceMode,
+                    onChanged: (mode) =>
+                        provider.setPrimarySourceMode(mode),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // 4 Reading Cards — the first swaps between the Nozzle
+                // (Digital Machine) and Meter image container based on the
+                // selector above; the rest stay unchanged.
                 ...items.asMap().entries.map((entry) {
                   final int index = entry.key;
                   final item = entry.value;

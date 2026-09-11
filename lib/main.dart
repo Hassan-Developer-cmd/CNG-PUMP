@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'constants/app_constants.dart';
+import 'providers/history_provider.dart';
 import 'providers/text_comparison_provider.dart';
-// import 'screens/dashboard/dashboard_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => TextComparisonProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TextComparisonProvider()),
+        ChangeNotifierProvider(create: (_) => HistoryProvider()),
+      ],
       child: const MyApp(),
     ),
   );

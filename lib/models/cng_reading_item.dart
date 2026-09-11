@@ -9,11 +9,20 @@ enum CngReadingType {
   suiGas,
 }
 
+/// The two data-source modes for the first ("primary") reading card on the
+/// Dashboard. Chosen via the "Select Nozzle" dropdown — switching modes
+/// swaps that card's title/icon between a Nozzle (Digital Machine) reading
+/// and a standalone Meter reading, per the design reference.
+enum PrimarySourceMode { nozzle, meter }
+
 class CngReadingItem {
   final CngReadingType type;
-  final String title;
   final bool isRequired;
-  final IconData icon;
+
+  // Mutable so the primary (first) card can be relabeled when the user
+  // switches between Nozzle and Meter mode without changing its identity.
+  String title;
+  IconData icon;
 
   File? image;
   String extractedText;

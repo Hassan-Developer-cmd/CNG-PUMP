@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
@@ -92,15 +93,15 @@ class _CngReadingCardState extends State<CngReadingCard> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.r),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18.r),
         border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
+            blurRadius: 6.r,
             offset: const Offset(0, 2),
           ),
         ],
@@ -112,19 +113,19 @@ class _CngReadingCardState extends State<CngReadingCard> {
           Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 32.w,
+                height: 32.h,
                 decoration: BoxDecoration(
                   color: AppColors.lightTeal,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   widget.item.icon,
-                  size: 18,
+                  size: 18.sp,
                   color: AppColors.primaryTeal,
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10.w),
               Expanded(
                 child: Text(
                   widget.item.title,
@@ -134,24 +135,24 @@ class _CngReadingCardState extends State<CngReadingCard> {
               StatusBadge(isRequired: widget.item.isRequired),
             ],
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14.h),
 
           // Picture Box
           _buildPictureBox(),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
 
           // Input Data Box
           _buildInputDataBox(),
 
           // Error or status note if any
           if (widget.item.error != null && widget.item.error!.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            SizedBox(height: 6.h),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: EdgeInsets.symmetric(horizontal: 4.h),
               child: Text(
                 widget.item.error!,
-                style: const TextStyle(
-                  fontSize: 12,
+                style: TextStyle(
+                  fontSize: 12.sp,
                   color: AppColors.alertRedTitle,
                   fontWeight: FontWeight.w500,
                 ),
@@ -166,20 +167,20 @@ class _CngReadingCardState extends State<CngReadingCard> {
   Widget _buildPictureBox() {
     return DashedBorderBox(
       borderColor: _borderColor,
-      borderRadius: 12,
+      borderRadius: 12.r,
       onTap: _handlePictureTap,
       padding: EdgeInsets.zero,
       child: Container(
-        height: 110,
+        height: 110.h,
         width: double.infinity,
         alignment: Alignment.center,
         child: widget.item.isLoading
-            ? const Column(
+            ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SizedBox(
-                    width: 26,
-                    height: 26,
+                    width: 26.w,
+                    height: 26.h,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
                       valueColor: AlwaysStoppedAnimation<Color>(
@@ -187,81 +188,79 @@ class _CngReadingCardState extends State<CngReadingCard> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   Text(
                     'Extracting text...',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 12.sp,
                       color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               )
             : widget.item.hasImage
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Stack(
-                      children: [
-                        Image.file(
-                          widget.item.image!,
-                          width: double.infinity,
-                          height: 110,
-                          fit: BoxFit.cover,
-                        ),
-                        Container(
-                          color: Colors.black.withValues(alpha: 0.25),
-                        ),
-                        Positioned(
-                          right: 8,
-                          bottom: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                  size: 14,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Retake',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  children: [
+                    Image.file(
+                      widget.item.image!,
+                      width: double.infinity,
+                      height: 110.h,
+                      fit: BoxFit.cover,
                     ),
-                  )
-                : const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.camera_alt_outlined,
-                        size: 28,
-                        color: AppColors.textPrimary,
+                    Container(color: Colors.black.withValues(alpha: 0.25)),
+                    Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.6),
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 14.sp,
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'Retake',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        AppConstants.takePicture,
-                        style: AppTypography.actionLabel,
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.camera_alt_outlined,
+                    size: 28.sp,
+                    color: AppColors.textPrimary,
                   ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    AppConstants.takePicture,
+                    style: AppTypography.actionLabel,
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -269,16 +268,13 @@ class _CngReadingCardState extends State<CngReadingCard> {
   Widget _buildInputDataBox() {
     return DashedBorderBox(
       borderColor: _borderColor,
-      borderRadius: 12,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      borderRadius: 12.r,
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            AppConstants.inputData,
-            style: AppTypography.inputLabel,
-          ),
-          const SizedBox(height: 2),
+          Text(AppConstants.inputData, style: AppTypography.inputLabel),
+          SizedBox(height: 2.h),
           TextField(
             controller: _controller,
             enabled: !widget.item.isLoading,
@@ -286,7 +282,7 @@ class _CngReadingCardState extends State<CngReadingCard> {
             style: AppTypography.inputText,
             decoration: InputDecoration(
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 4),
+              contentPadding: EdgeInsets.symmetric(vertical: 4.h),
               border: InputBorder.none,
               hintText: AppConstants.inputDataHint,
               hintStyle: AppTypography.inputHint,
