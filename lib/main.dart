@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'constants/app_constants.dart';
 import 'providers/history_provider.dart';
-import 'providers/text_comparison_provider.dart';
+import 'providers/capture_provider.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -12,7 +12,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TextComparisonProvider()),
+        ChangeNotifierProvider(create: (_) => CaptureProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
       ],
       child: const MyApp(),

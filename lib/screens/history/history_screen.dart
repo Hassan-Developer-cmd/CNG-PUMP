@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../providers/history_provider.dart';
 import '../../widgets/history/history_card.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
-import '../comparing_result/comparing_result_screen.dart';
+import '../result_screen/result_screen.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -31,12 +30,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         builder: (context, historyProvider, child) {
           final records = historyProvider.records;
 
-          if (records.isEmpty) {
-            return _buildEmptyState();
-          }
+          if (records.isEmpty) return _buildEmptyState();
 
           final visibleRecords = records.take(_visibleCount).toList();
-          final bool hasMore = _visibleCount < records.length;
+          final hasMore = _visibleCount < records.length;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -54,10 +51,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 const SizedBox(height: 4),
                 const Text(
                   AppConstants.historySubtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 ...visibleRecords.map(
@@ -68,42 +62,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              ComparingResultScreen(result: record.result),
+                          builder: (_) => ResultScreen(historyRecord: record),
                         ),
                       ),
                     ),
                   ),
                 ),
-                if (hasMore) ...[
-                  const SizedBox(height: 4),
+                if (hasMore)
                   Center(
                     child: TextButton(
-                      onPressed: () {
-                        setState(() => _visibleCount += _pageSize);
-                      },
+                      onPressed: () => setState(() => _visibleCount += _pageSize),
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.headerGray,
                         foregroundColor: AppColors.textPrimary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       ),
                       child: const Text(
                         AppConstants.loadMoreRecords,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
-                ],
-                const SizedBox(height: 8),
               ],
             ),
           );
@@ -122,24 +102,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
             Container(
               width: 72,
               height: 72,
-              decoration: const BoxDecoration(
-                color: AppColors.lightTeal,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.history_rounded,
-                size: 34,
-                color: AppColors.primaryTeal,
-              ),
+              decoration: const BoxDecoration(color: AppColors.lightTeal, shape: BoxShape.circle),
+              child: const Icon(Icons.history_rounded, size: 34, color: AppColors.primaryTeal),
             ),
             const SizedBox(height: 18),
             const Text(
               AppConstants.noHistoryYet,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 6),
             const Text(

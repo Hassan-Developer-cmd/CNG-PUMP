@@ -185,11 +185,11 @@ class _CameraScreenState extends State<CameraScreen>
     await _startCameraController(_cameras[_selectedCameraIndex]);
   }
 
-  static const double _ocrCropPadding = 0.22;
+  static const double _cropPadding = 0.22;
 
-  Rect _paddedOcrWindow(Rect scanWindow) {
-    final double padX = scanWindow.width * _ocrCropPadding;
-    final double padY = scanWindow.height * _ocrCropPadding;
+  Rect _paddedCaptureWindow(Rect scanWindow) {
+    final double padX = scanWindow.width * _cropPadding;
+    final double padY = scanWindow.height * _cropPadding;
     return Rect.fromLTRB(
       scanWindow.left - padX,
       scanWindow.top - padY,
@@ -289,10 +289,10 @@ class _CameraScreenState extends State<CameraScreen>
 
     try {
       final XFile photo = await _controller!.takePicture();
-      final Rect ocrWindow = _paddedOcrWindow(scanWindow);
+      final Rect captureWindow = _paddedCaptureWindow(scanWindow);
       final File croppedFile = await _cropImageToScanWindow(
         photo,
-        ocrWindow,
+        captureWindow,
         screenSize,
       );
 

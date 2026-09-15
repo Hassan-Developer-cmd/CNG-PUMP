@@ -1,21 +1,14 @@
 import 'package:flutter/material.dart';
+import '../models/capture_history_item.dart';
 
-import '../models/comparison_history_item.dart';
-import '../models/comparison_result_model.dart';
-
-/// Holds the log of past comparisons shown on the History screen.
-///
-/// A new record is appended every time a comparison finishes on the
-/// Comparing Data screen, newest first.
 class HistoryProvider extends ChangeNotifier {
-  final List<ComparisonHistoryItem> _records = [];
-
-  List<ComparisonHistoryItem> get records => List.unmodifiable(_records);
-
+  final List<CaptureHistoryItem> _records = [];
+  List<CaptureHistoryItem> get records => List.unmodifiable(_records);
   bool get isEmpty => _records.isEmpty;
 
-  void addFromResult(ComparisonResultModel result) {
-    _records.insert(0, ComparisonHistoryItem.fromResult(result));
+  void addCapture({required List<CapturedImage> images}) {
+    if (images.isEmpty) return;
+    _records.insert(0, CaptureHistoryItem(dateTime: DateTime.now(), images: List.unmodifiable(images)));
     notifyListeners();
   }
 

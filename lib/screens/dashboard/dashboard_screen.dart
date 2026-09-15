@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../models/cng_reading_item.dart';
-import '../../providers/text_comparison_provider.dart';
+import '../../providers/capture_provider.dart';
+import '../../providers/history_provider.dart';
+import '../../models/capture_history_item.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
 import '../../widgets/shared_widgets/custom_primary_button.dart';
 import '../../widgets/shared_widgets/source_selector_dropdown.dart';
@@ -15,7 +17,7 @@ import '../../widgets/dashboard/cng_reading_card.dart';
 import '../../widgets/dashboard/info_note_card.dart';
 import '../../widgets/dashboard/user_profile_header.dart';
 import '../camera_screen/camera_screen.dart';
-import '../comparing_result/comparing_data_screen.dart';
+import '../result_screen/result_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -26,17 +28,25 @@ class DashboardScreen extends StatelessWidget {
       MaterialPageRoute(builder: (context) => const CameraScreen()),
     );
     if (capturedFile != null && context.mounted) {
-      await context.read<TextComparisonProvider>().setImageByType(
+      await context.read<CaptureProvider>().setImageByType(
         type,
         capturedFile,
       );
     }
   }
 
-  void _navigateToComparison(BuildContext context) {
+  void _navigateToResult(BuildContext context) {
+    final provider = context.read<CaptureProvider>();
+    final captured = provider.readingItems
+        .where((item) => item.hasImage)
+        .map((item) => CapturedImage(label: item.title, image: item.image!, inputData: item.inputData))
+        .toList();
+
+    context.read<HistoryProvider>().addCapture(images: captured);
+
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const ComparingDataScreen()),
+      MaterialPageRoute(builder: (context) => const ResultScreen()),
     );
   }
 
@@ -50,7 +60,7 @@ class DashboardScreen extends StatelessWidget {
           title: AppConstants.appName,
           showLogo: true,
           actions: [
-            Consumer<TextComparisonProvider>(
+            Consumer<CaptureProvider>(
               builder: (context, provider, child) {
                 return IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
@@ -63,7 +73,7 @@ class DashboardScreen extends StatelessWidget {
         ),
 
         // BODY
-        body: Consumer<TextComparisonProvider>(
+        body: Consumer<CaptureProvider>(
           builder: (context, provider, child) {
             final items = provider.readingItems;
 
@@ -97,8 +107,8 @@ class DashboardScreen extends StatelessWidget {
                             _openCamera(context, item.type),
                         onImageCaptured: (file) =>
                             provider.setImageByType(item.type, file),
-                        onTextChanged: (text) =>
-                            provider.setTextByType(item.type, text),
+                        onInputDataChanged: (value) =>
+                            provider.setInputDataByType(item.type, value),
                       ),
                     );
                   }),
@@ -110,13 +120,12 @@ class DashboardScreen extends StatelessWidget {
                   // INFO NOTE
                   InfoNoteCard(),
                   SizedBox(height: 20.h),
-                  // COMPARE BUTTON
+                  // RESULT BUTTON
                   CustomPrimaryButton(
-                    text: AppConstants.compareData,
-                    icon: Icons.compare_arrows,
-                    isEnabled: provider.canCompare,
-                    isLoading: provider.isAnyLoading,
-                    onPressed: () => _navigateToComparison(context),
+                    text: AppConstants.viewResult,
+                    icon: Icons.arrow_forward_rounded,
+                    isEnabled: provider.canViewResult,
+                    onPressed: () => _navigateToResult(context),
                   ),
 
                   SizedBox(height: 8.h),

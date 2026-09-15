@@ -5,7 +5,7 @@ import '../dashboard/dashboard_screen.dart';
 import '../history/history_screen.dart';
 
 /// Root screen after login. Hosts the shared [BottomNavWidget] and swaps
-/// between the Dashboard ("Input & Compare") and History tabs, keeping
+/// between the Dashboard ("Capture") and History tabs, keeping
 /// each tab's state alive via an IndexedStack.
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
