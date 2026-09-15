@@ -11,13 +11,18 @@ import '../utils/reading_parser.dart';
 class TextComparisonProvider extends ChangeNotifier {
   final OcrService _ocrService = OcrService();
 
-  // 4 CNG READING ITEMS MATCHING UI REQUIREMENTS
+  // 4 CNG READING ITEMS MATCHING UI REQUIREMENTS.
+  // Index 3 (Sui Gas) is kept only for backward-compatible access from the
+  // comparison screen — it is no longer rendered on the dashboard. The
+  // dashboard now always shows items 0-2, just relabeled per mode:
+  //   Meter mode  -> Meter / Counter / Micro Motion
+  //   Nozzle mode -> VB1 / VS1 / R Flow
   final List<CngReadingItem> _cngItems = [
     CngReadingItem(
       type: CngReadingType.digitalMachine,
-      title: AppConstants.digitalMachine,
+      title: AppConstants.meterLabel,
       isRequired: true,
-      icon: Icons.memory,
+      icon: Icons.speed_outlined,
     ),
     CngReadingItem(
       type: CngReadingType.manualData,
@@ -28,7 +33,8 @@ class TextComparisonProvider extends ChangeNotifier {
     CngReadingItem(
       type: CngReadingType.microMotion,
       title: AppConstants.microMotion,
-      isRequired: true,
+      // Matches the Figma spec: this slot is flagged OPTIONAL in both modes.
+      isRequired: false,
       icon: Icons.speed_outlined,
     ),
     CngReadingItem(
@@ -44,32 +50,54 @@ class TextComparisonProvider extends ChangeNotifier {
 
   double _toleranceThreshold = AppConstants.defaultToleranceThreshold;
 
-  // PRIMARY SOURCE MODE (Nozzle vs Meter) — controls the first card only.
-  PrimarySourceMode _primarySourceMode = PrimarySourceMode.nozzle;
+  // PRIMARY SOURCE MODE (Nozzle vs Meter) — a single global switch that
+  // relabels the same three cards; it does not change how many cards show.
+  PrimarySourceMode _primarySourceMode = PrimarySourceMode.meter;
   PrimarySourceMode get primarySourceMode => _primarySourceMode;
 
-  /// Switches the first reading card between "Nozzle" (Digital Machine)
-  /// and "Meter" mode. The two represent different physical data sources,
-  /// so any previously captured image/text for that slot is cleared.
+  /// Switches all three dashboard cards between the "Meter" label set
+  /// (Meter / Counter / Micro Motion) and the "Nozzle" label set
+  /// (VB1 / VS1 / R Flow). Since each label set represents a different
+  /// physical data source, previously captured image/text for all three
+  /// slots is cleared on switch.
   void setPrimarySourceMode(PrimarySourceMode mode) {
     if (mode == _primarySourceMode) return;
     _primarySourceMode = mode;
 
-    final primary = _cngItems[0];
-    _ocrGeneration[0]++;
-    primary.reset();
-    if (mode == PrimarySourceMode.nozzle) {
-      primary.title = AppConstants.digitalMachine;
-      primary.icon = Icons.memory;
-    } else {
-      primary.title = AppConstants.meterLabel;
-      primary.icon = Icons.speed_outlined;
+    final meterItem = _cngItems[0];
+    final counterItem = _cngItems[1];
+    final microItem = _cngItems[2];
+
+    for (final i in [0, 1, 2]) {
+      _ocrGeneration[i]++;
     }
+    meterItem.reset();
+    counterItem.reset();
+    microItem.reset();
+
+    if (mode == PrimarySourceMode.meter) {
+      meterItem.title = AppConstants.meterLabel;
+      meterItem.icon = Icons.speed_outlined;
+      counterItem.title = AppConstants.manualData;
+      counterItem.icon = Icons.description_outlined;
+      microItem.title = AppConstants.microMotion;
+      microItem.icon = Icons.speed_outlined;
+    } else {
+      meterItem.title = 'VB1';
+      meterItem.icon = Icons.local_fire_department_outlined;
+      counterItem.title = 'VS1';
+      counterItem.icon = Icons.local_fire_department_outlined;
+      microItem.title = 'R Flow';
+      microItem.icon = Icons.local_fire_department_outlined;
+    }
+
     notifyListeners();
   }
 
   // GETTERS
-  List<CngReadingItem> get readingItems => List.unmodifiable(_cngItems);
+  // Dashboard always renders exactly these 3 cards; only their title/icon
+  // change with mode. Sui Gas (index 3) is intentionally excluded here.
+  List<CngReadingItem> get readingItems => List.unmodifiable(_cngItems.take(3));
 
   double get toleranceThreshold => _toleranceThreshold;
   set toleranceThreshold(double value) {
@@ -241,11 +269,9 @@ class TextComparisonProvider extends ChangeNotifier {
 
   // NUMERICAL & COMPARISON LOGIC
   //
-  // Sui Gas (the optional 4th item) is intentionally excluded from both the
-  // numeric corruption check AND the mismatch/allMatch check below. It is
-  // shown to the user and its own raw text/numeric value is still exposed
-  // via ComparisonResultModel for display, but it never affects whether the
-  // reading is flagged as "corrupted" or "different".
+  // Sui Gas (the optional 4th item, no longer shown on the dashboard) is
+  // intentionally excluded from both the numeric corruption check AND the
+  // mismatch/allMatch check below.
   ComparisonResultModel get comparisonResult {
     final digital = getItemByType(CngReadingType.digitalMachine);
     final manual = getItemByType(CngReadingType.manualData);
@@ -282,7 +308,7 @@ class TextComparisonProvider extends ChangeNotifier {
   }
 
   // REQUIRED-ONLY items, in a stable order, used by allMatch/differentIndexes
-  // below so the optional Sui Gas entry can never trigger a mismatch flag.
+  // below so the optional slots can never trigger a mismatch flag.
   List<CngReadingItem> get _requiredItemsInOrder =>
       _cngItems.where((i) => i.isRequired).toList(growable: false);
 
@@ -310,7 +336,7 @@ class TextComparisonProvider extends ChangeNotifier {
 
     for (int i = 0; i < _cngItems.length; i++) {
       final item = _cngItems[i];
-      if (!item.isRequired) continue; // Sui Gas never flagged as different
+      if (!item.isRequired) continue; // optional slots never flagged
       final value = item.numericValue;
       if (value != null && value != base) {
         different.add(i);

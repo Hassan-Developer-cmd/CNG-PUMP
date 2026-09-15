@@ -6,10 +6,11 @@ import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
+import '../../models/cng_reading_item.dart';
 import '../../providers/text_comparison_provider.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
 import '../../widgets/shared_widgets/custom_primary_button.dart';
-// import '../../widgets/shared_widgets/source_selector_dropdown.dart';
+import '../../widgets/shared_widgets/source_selector_dropdown.dart';
 import '../../widgets/dashboard/cng_reading_card.dart';
 import '../../widgets/dashboard/info_note_card.dart';
 import '../../widgets/dashboard/user_profile_header.dart';
@@ -19,14 +20,14 @@ import '../comparing_result/comparing_data_screen.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  Future<void> _openCamera(BuildContext context, int index) async {
+  Future<void> _openCamera(BuildContext context, CngReadingType type) async {
     final File? capturedFile = await Navigator.push<File?>(
       context,
       MaterialPageRoute(builder: (context) => const CameraScreen()),
     );
     if (capturedFile != null && context.mounted) {
-      await context.read<TextComparisonProvider>().setImage(
-        index,
+      await context.read<TextComparisonProvider>().setImageByType(
+        type,
         capturedFile,
       );
     }
@@ -65,6 +66,7 @@ class DashboardScreen extends StatelessWidget {
         body: Consumer<TextComparisonProvider>(
           builder: (context, provider, child) {
             final items = provider.readingItems;
+
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
@@ -74,32 +76,33 @@ class DashboardScreen extends StatelessWidget {
                   // USER PROFILE
                   UserProfileHeader(),
                   SizedBox(height: 18.h),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      SourceSelectorDropdown(
+                        selected: provider.primarySourceMode,
+                        onChanged: provider.setPrimarySourceMode,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10.h),
+
                   // READING CARDS
-                  ...items.asMap().entries.map((entry) {
-                    final int index = entry.key;
-                    final item = entry.value;
+                  ...items.map((item) {
                     return Padding(
                       padding: EdgeInsets.only(bottom: 14.h),
                       child: CngReadingCard(
                         item: item,
-                        // Only the FIRST card gets the selector.
-                        showSourceSelector: index == 0,
-                        selectedSource: provider.primarySourceMode,
-                        onSourceChanged: index == 0
-                            ? provider.setPrimarySourceMode
-                            : null,
-                        // Existing camera behavior remains intact.
                         onCustomCameraRequested: () =>
-                            _openCamera(context, index),
-                        onImageCaptured: (file) {
-                          provider.setImage(index, file);
-                        },
-                        onTextChanged: (text) {
-                          provider.setText(index, text);
-                        },
+                            _openCamera(context, item.type),
+                        onImageCaptured: (file) =>
+                            provider.setImageByType(item.type, file),
+                        onTextChanged: (text) =>
+                            provider.setTextByType(item.type, text),
                       ),
                     );
                   }),
+
                   SizedBox(height: 2.h),
                   // DIVIDER
                   Divider(color: AppColors.divider, height: 1),

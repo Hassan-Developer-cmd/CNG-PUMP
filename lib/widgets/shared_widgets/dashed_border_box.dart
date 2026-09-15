@@ -17,41 +17,54 @@ class DashedBorderBox extends StatelessWidget {
     required this.child,
     required this.borderColor,
     this.backgroundColor,
-    this.borderRadius = 10.0,
-    this.strokeWidth = 1.2,
-    this.dashLength = 5.0,
-    this.dashGap = 3.5,
+    this.borderRadius = 8.0,
+    this.strokeWidth = 1.0,
+    this.dashLength = 3.0,
+    this.dashGap = 2.0,
     this.padding,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    Widget content = CustomPaint(
-      painter: DashedBorderPainter(
-        color: borderColor,
-        strokeWidth: strokeWidth,
-        dashLength: dashLength,
-        dashGap: dashGap,
-        borderRadius: borderRadius,
-      ),
-      child: Container(
-        padding: padding ?? const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.white,
-          borderRadius: BorderRadius.circular(borderRadius),
+    final BorderRadius radius = BorderRadius.circular(borderRadius);
+
+    final Widget content = Material(
+      color: Colors.transparent,
+      borderRadius: radius,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        splashColor: onTap == null
+            ? Colors.transparent
+            : borderColor.withValues(alpha: 0.08),
+        highlightColor: onTap == null
+            ? Colors.transparent
+            : borderColor.withValues(alpha: 0.04),
+        child: CustomPaint(
+          // IMPORTANT:
+          // foregroundPainter draws the dashed border
+          // AFTER the child has been painted.
+          foregroundPainter: DashedBorderPainter(
+            color: borderColor,
+            strokeWidth: strokeWidth,
+            dashLength: dashLength,
+            dashGap: dashGap,
+            borderRadius: borderRadius,
+          ),
+          child: Container(
+            width: double.infinity,
+            padding: padding ?? const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: backgroundColor ?? const Color(0xFFFCFDFD),
+              borderRadius: radius,
+            ),
+            child: child,
+          ),
         ),
-        child: child,
       ),
     );
-
-    if (onTap != null) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: content,
-      );
-    }
 
     return content;
   }

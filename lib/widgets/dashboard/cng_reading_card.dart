@@ -9,7 +9,6 @@ import '../../constants/app_constants.dart';
 import '../../constants/app_typography.dart';
 import '../../models/cng_reading_item.dart';
 import '../shared_widgets/dashed_border_box.dart';
-import '../shared_widgets/source_selector_dropdown.dart';
 import '../shared_widgets/status_badge.dart';
 
 class CngReadingCard extends StatefulWidget {
@@ -18,20 +17,12 @@ class CngReadingCard extends StatefulWidget {
   final Function(String text) onTextChanged;
   final VoidCallback? onCustomCameraRequested;
 
-  // First card only.
-  final bool showSourceSelector;
-  final PrimarySourceMode? selectedSource;
-  final ValueChanged<PrimarySourceMode>? onSourceChanged;
-
   const CngReadingCard({
     super.key,
     required this.item,
     required this.onImageCaptured,
     required this.onTextChanged,
     this.onCustomCameraRequested,
-    this.showSourceSelector = false,
-    this.selectedSource,
-    this.onSourceChanged,
   });
 
   @override
@@ -43,7 +34,6 @@ class _CngReadingCardState extends State<CngReadingCard> {
 
   final ImagePicker _picker = ImagePicker();
 
-  // Sui Gas has three independent image areas.
   File? _vb1Image;
   File? _vs1Image;
   File? _rFlowImage;
@@ -77,13 +67,13 @@ class _CngReadingCardState extends State<CngReadingCard> {
   }
 
   // BORDER COLOR
-
   Color get _borderColor {
     if (widget.item.isRequired) {
       return widget.item.hasText || widget.item.hasImage
           ? AppColors.dashedTeal
           : AppColors.dashedRed;
     }
+
     return AppColors.dashedGreen;
   }
 
@@ -103,6 +93,7 @@ class _CngReadingCardState extends State<CngReadingCard> {
         maxHeight: 2048,
         imageQuality: 100,
       );
+
       if (photo != null) {
         widget.onImageCaptured(File(photo.path));
       }
@@ -113,6 +104,8 @@ class _CngReadingCardState extends State<CngReadingCard> {
 
   // SUI GAS CAMERA
   Future<void> _captureSuiGasImage(String type) async {
+    if (widget.item.isLoading) return;
+
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
@@ -122,6 +115,7 @@ class _CngReadingCardState extends State<CngReadingCard> {
       );
 
       if (photo == null) return;
+
       final File image = File(photo.path);
 
       setState(() {
@@ -129,9 +123,11 @@ class _CngReadingCardState extends State<CngReadingCard> {
           case 'VB1':
             _vb1Image = image;
             break;
+
           case 'VS1':
             _vs1Image = image;
             break;
+
           case 'R Flow':
             _rFlowImage = image;
             break;
@@ -149,14 +145,14 @@ class _CngReadingCardState extends State<CngReadingCard> {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16.r),
+      padding: EdgeInsets.all(12.r),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18.r),
+        borderRadius: BorderRadius.circular(14.r),
         border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
+            color: Colors.black.withValues(alpha: 0.025),
             blurRadius: 6.r,
             offset: const Offset(0, 2),
           ),
@@ -170,19 +166,19 @@ class _CngReadingCardState extends State<CngReadingCard> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 32.w,
-                height: 32.h,
+                width: 30.w,
+                height: 30.h,
                 decoration: BoxDecoration(
                   color: AppColors.lightTeal,
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Icon(
                   widget.item.icon,
-                  size: 18.sp,
+                  size: 17.sp,
                   color: AppColors.primaryTeal,
                 ),
               ),
-              SizedBox(width: 10.w),
+              SizedBox(width: 9.w),
               Expanded(
                 child: Text(
                   widget.item.title,
@@ -192,26 +188,13 @@ class _CngReadingCardState extends State<CngReadingCard> {
               StatusBadge(isRequired: widget.item.isRequired),
             ],
           ),
-          // SOURCE SELECTOR
-          if (widget.showSourceSelector) ...[
-            SizedBox(height: 12.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                SourceSelectorDropdown(
-                  selected: widget.selectedSource ?? PrimarySourceMode.nozzle,
-                  onChanged: widget.onSourceChanged ?? (_) {},
-                ),
-              ],
-            ),
-          ],
-          SizedBox(height: 14.h),
-          // SUI GAS SPECIAL LAYOUT
+          SizedBox(height: 13.h),
+          // CONTENT
           if (isSuiGas)
             _buildSuiGasContent()
           else ...[
             _buildPictureBox(),
-            SizedBox(height: 12.h),
+            SizedBox(height: 10.h),
             _buildInputDataBox(),
           ],
 
@@ -219,11 +202,11 @@ class _CngReadingCardState extends State<CngReadingCard> {
           if (widget.item.error != null && widget.item.error!.isNotEmpty) ...[
             SizedBox(height: 6.h),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.w),
+              padding: EdgeInsets.symmetric(horizontal: 3.w),
               child: Text(
                 widget.item.error!,
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: 11.sp,
                   color: AppColors.alertRedTitle,
                   fontWeight: FontWeight.w500,
                 ),
@@ -239,11 +222,15 @@ class _CngReadingCardState extends State<CngReadingCard> {
   Widget _buildPictureBox() {
     return DashedBorderBox(
       borderColor: _borderColor,
-      borderRadius: 12.r,
-      onTap: _handlePictureTap,
+      backgroundColor: const Color(0xFFFCFDFD),
+      borderRadius: 8.r,
+      strokeWidth: 1.r,
+      dashLength: 3.r,
+      dashGap: 2.r,
       padding: EdgeInsets.zero,
+      onTap: _handlePictureTap,
       child: SizedBox(
-        height: 110.h,
+        height: 105.h,
         width: double.infinity,
         child: widget.item.isLoading
             ? _buildLoadingContent()
@@ -254,40 +241,47 @@ class _CngReadingCardState extends State<CngReadingCard> {
     );
   }
 
-  // LOADING
-  Widget _buildLoadingContent() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: 26.w,
-          height: 26.h,
-          child: const CircularProgressIndicator(
-            strokeWidth: 2.5,
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryTeal),
-          ),
-        ),
-        SizedBox(height: 8.h),
-        Text(
-          'Extracting text...',
-          style: TextStyle(fontSize: 12.sp, color: AppColors.textSecondary),
-        ),
-      ],
-    );
-  }
-
-  // EMPTY CAMERA
+  // EMPTY PICTURE CONTENT
   Widget _buildEmptyPictureContent() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.camera_alt_outlined,
-          size: 28.sp,
+          size: 24.sp,
           color: AppColors.textPrimary,
         ),
-        SizedBox(height: 6.h),
-        Text(AppConstants.takePicture, style: AppTypography.actionLabel),
+        SizedBox(height: 5.h),
+        Text(
+          AppConstants.takePicture,
+          style: TextStyle(
+            fontSize: 10.sp,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // LOADING
+  Widget _buildLoadingContent() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 24.w,
+          height: 24.h,
+          child: const CircularProgressIndicator(
+            strokeWidth: 2.2,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryTeal),
+          ),
+        ),
+        SizedBox(height: 7.h),
+        Text(
+          'Extracting text...',
+          style: TextStyle(fontSize: 10.sp, color: AppColors.textSecondary),
+        ),
       ],
     );
   }
@@ -295,31 +289,31 @@ class _CngReadingCardState extends State<CngReadingCard> {
   // CAPTURED IMAGE
   Widget _buildCapturedImage(File image) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12.r),
+      borderRadius: BorderRadius.circular(8.r),
       child: Stack(
         fit: StackFit.expand,
         children: [
           Image.file(image, fit: BoxFit.cover),
-          Container(color: Colors.black.withValues(alpha: 0.25)),
+          Container(color: Colors.black.withValues(alpha: 0.22)),
           Positioned(
-            right: 8.w,
-            bottom: 8.h,
+            right: 7.w,
+            bottom: 7.h,
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 4.h),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(6.r),
+                color: Colors.black.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(5.r),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.camera_alt, color: Colors.white, size: 14.sp),
+                  Icon(Icons.camera_alt, color: Colors.white, size: 12.sp),
                   SizedBox(width: 4.w),
                   Text(
                     'Retake',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 11.sp,
+                      fontSize: 9.sp,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -332,28 +326,42 @@ class _CngReadingCardState extends State<CngReadingCard> {
     );
   }
 
-  // INPUT DATA
+  // INPUT DATA BOX
   Widget _buildInputDataBox() {
     return DashedBorderBox(
       borderColor: _borderColor,
-      borderRadius: 12.r,
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+      backgroundColor: const Color(0xFFFCFDFD),
+      borderRadius: 8.r,
+      strokeWidth: 1.r,
+      dashLength: 3.r,
+      dashGap: 2.r,
+      padding: EdgeInsets.symmetric(horizontal: 11.w, vertical: 7.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppConstants.inputData, style: AppTypography.inputLabel),
-          SizedBox(height: 2.h),
+          Text(
+            AppConstants.inputData,
+            style: TextStyle(
+              fontSize: 9.sp,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          SizedBox(height: 1.h),
           TextField(
             controller: _controller,
             enabled: !widget.item.isLoading,
             onChanged: widget.onTextChanged,
-            style: AppTypography.inputText,
+            style: TextStyle(fontSize: 11.sp, color: AppColors.textPrimary),
             decoration: InputDecoration(
               isDense: true,
-              contentPadding: EdgeInsets.symmetric(vertical: 4.h),
+              contentPadding: EdgeInsets.symmetric(vertical: 2.h),
               border: InputBorder.none,
               hintText: AppConstants.inputDataHint,
-              hintStyle: AppTypography.inputHint,
+              hintStyle: TextStyle(
+                fontSize: 10.sp,
+                color: AppColors.textSecondary.withValues(alpha: 0.7),
+              ),
             ),
           ),
         ],
@@ -366,110 +374,118 @@ class _CngReadingCardState extends State<CngReadingCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildSuiGasPictureBox(label: 'VB1', image: _vb1Image),
-            ),
-            SizedBox(width: 8.w),
-            Expanded(
-              child: _buildSuiGasPictureBox(label: 'VS1', image: _vs1Image),
-            ),
+        // VB1
+        _buildSuiGasPictureBox(label: 'VB1', image: _vb1Image),
+        SizedBox(height: 10.h),
 
-            SizedBox(width: 8.w),
+        // VS1
+        _buildSuiGasPictureBox(label: 'VS1', image: _vs1Image),
+        SizedBox(height: 10.h),
 
-            Expanded(
-              child: _buildSuiGasPictureBox(
-                label: 'R Flow',
-                image: _rFlowImage,
-              ),
-            ),
-          ],
-        ),
+        // R FLOW
+        _buildSuiGasPictureBox(label: 'R Flow', image: _rFlowImage),
+
+        // INPUT DATA BOX
         SizedBox(height: 12.h),
+
         _buildInputDataBox(),
       ],
     );
   }
 
-  // SUI GAS INDIVIDUAL IMAGE BOX
+  // SUI GAS IMAGE BOX
+
   Widget _buildSuiGasPictureBox({required String label, required File? image}) {
-    return DashedBorderBox(
-      borderColor: _borderColor,
-      borderRadius: 12.r,
-      onTap: () => _captureSuiGasImage(label),
-      padding: EdgeInsets.zero,
-      child: SizedBox(
-        height: 105.h,
-        child: image == null
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.camera_alt_outlined,
-                    size: 25.sp,
-                    color: AppColors.textPrimary,
-                  ),
-                  SizedBox(height: 5.h),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              )
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(12.r),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.file(image, fit: BoxFit.cover),
-                    Container(color: Colors.black.withValues(alpha: 0.25)),
-                    Positioned(
-                      left: 6.w,
-                      top: 6.h,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6.w,
-                          vertical: 3.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(5.r),
-                        ),
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 6.w,
-                      bottom: 6.h,
-                      child: Container(
-                        padding: EdgeInsets.all(5.r),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 13.sp,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        DashedBorderBox(
+          borderColor: _borderColor,
+          backgroundColor: const Color(0xFFFCFDFD),
+          borderRadius: 8.r,
+          strokeWidth: 1.r,
+          dashLength: 3.r,
+          dashGap: 2.r,
+          padding: EdgeInsets.zero,
+          onTap: () => _captureSuiGasImage(label),
+          child: SizedBox(
+            width: double.infinity,
+            height: 105.h,
+            child: image == null
+                ? _buildSuiGasEmptyContent()
+                : _buildSuiGasCapturedImage(image),
+          ),
+        ),
+
+        // LABEL
+        Positioned(
+          left: 10.w,
+          top: -6.h,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 2.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5.r),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 8.sp,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryTeal,
               ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // SUI GAS EMPTY CONTENT
+  Widget _buildSuiGasEmptyContent() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.camera_alt_outlined,
+          size: 24.sp,
+          color: AppColors.textPrimary,
+        ),
+        SizedBox(height: 5.h),
+        Text(
+          AppConstants.takePicture,
+          style: TextStyle(
+            fontSize: 10.sp,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // SUI GAS CAPTURED IMAGE
+  Widget _buildSuiGasCapturedImage(File image) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8.r),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.file(image, fit: BoxFit.cover),
+          Container(color: Colors.black.withValues(alpha: 0.22)),
+          Positioned(
+            right: 7.w,
+            bottom: 7.h,
+            child: Container(
+              padding: EdgeInsets.all(6.r),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.65),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.camera_alt, color: Colors.white, size: 13.sp),
+            ),
+          ),
+        ],
       ),
     );
   }

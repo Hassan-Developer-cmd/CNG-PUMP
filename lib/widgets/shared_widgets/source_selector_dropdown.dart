@@ -3,9 +3,10 @@ import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../models/cng_reading_item.dart';
 
-/// The "Select Nozzle ▲" pill trigger that opens a small popover letting
-/// the user pick between Nozzle and Meter mode for the primary reading
-/// card on the Dashboard.
+// The mode pill trigger that opens a small popover letting the user pick
+// between Nozzle and Meter mode. The pill's own label always reflects
+// whichever mode is currently active — "Meter" when Meter mode is
+// selected, "Nozzle" when Nozzle mode is selected — rather than a static
 class SourceSelectorDropdown extends StatefulWidget {
   final PrimarySourceMode selected;
   final ValueChanged<PrimarySourceMode> onChanged;
@@ -17,12 +18,17 @@ class SourceSelectorDropdown extends StatefulWidget {
   });
 
   @override
-  State<SourceSelectorDropdown> createState() =>
-      _SourceSelectorDropdownState();
+  State<SourceSelectorDropdown> createState() => _SourceSelectorDropdownState();
 }
 
 class _SourceSelectorDropdownState extends State<SourceSelectorDropdown> {
   final GlobalKey _anchorKey = GlobalKey();
+
+  String get _currentLabel {
+    return widget.selected == PrimarySourceMode.meter
+        ? AppConstants.meterLabel
+        : AppConstants.nozzleLabel;
+  }
 
   Future<void> _openMenu(BuildContext context, GlobalKey anchorKey) async {
     final RenderBox button =
@@ -82,9 +88,7 @@ class _SourceSelectorDropdownState extends State<SourceSelectorDropdown> {
           color: isSelected ? AppColors.primaryTeal : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected
-                ? AppColors.primaryTeal
-                : AppColors.borderLight,
+            color: isSelected ? AppColors.primaryTeal : AppColors.borderLight,
           ),
         ),
         child: Text(
@@ -108,21 +112,21 @@ class _SourceSelectorDropdownState extends State<SourceSelectorDropdown> {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () => _openMenu(context, _anchorKey),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                AppConstants.selectSourceLabel,
-                style: TextStyle(
+                _currentLabel,
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
               ),
-              SizedBox(width: 4),
-              Icon(Icons.arrow_drop_up, color: Colors.white, size: 18),
+              const SizedBox(width: 4),
+              const Icon(Icons.arrow_drop_up, color: Colors.white, size: 18),
             ],
           ),
         ),
