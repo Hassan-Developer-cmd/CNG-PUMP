@@ -1,12 +1,15 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../providers/text_comparison_provider.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
 import '../../widgets/shared_widgets/custom_primary_button.dart';
-import '../../widgets/shared_widgets/source_selector_dropdown.dart';
+// import '../../widgets/shared_widgets/source_selector_dropdown.dart';
 import '../../widgets/dashboard/cng_reading_card.dart';
 import '../../widgets/dashboard/info_note_card.dart';
 import '../../widgets/dashboard/user_profile_header.dart';
@@ -21,7 +24,6 @@ class DashboardScreen extends StatelessWidget {
       context,
       MaterialPageRoute(builder: (context) => const CameraScreen()),
     );
-
     if (capturedFile != null && context.mounted) {
       await context.read<TextComparisonProvider>().setImage(
         index,
@@ -39,92 +41,87 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: CustomCurvedAppBar(
-        title: AppConstants.appName,
-        showLogo: true,
-        actions: [
-          Consumer<TextComparisonProvider>(
-            builder: (context, provider, child) {
-              return IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.white),
-                tooltip: 'Clear All',
-                onPressed: () => provider.clearAll(),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Consumer<TextComparisonProvider>(
-        builder: (context, provider, child) {
-          final items = provider.readingItems;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // User Profile Header ("Ali")
-                const UserProfileHeader(),
-                const SizedBox(height: 16),
-
-                // Nozzle / Meter selector for the primary (first) card
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SourceSelectorDropdown(
-                    selected: provider.primarySourceMode,
-                    onChanged: (mode) =>
-                        provider.setPrimarySourceMode(mode),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // 4 Reading Cards — the first swaps between the Nozzle
-                // (Digital Machine) and Meter image container based on the
-                // selector above; the rest stay unchanged.
-                ...items.asMap().entries.map((entry) {
-                  final int index = entry.key;
-                  final item = entry.value;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: CngReadingCard(
-                      item: item,
-                      onCustomCameraRequested: () =>
-                          _openCamera(context, index),
-                      onImageCaptured: (file) {
-                        provider.setImage(index, file);
-                      },
-                      onTextChanged: (text) {
-                        provider.setText(index, text);
-                      },
-                    ),
-                  );
-                }),
-
-                const SizedBox(height: 4),
-                const Divider(color: AppColors.divider, height: 1),
-                const SizedBox(height: 16),
-
-                // Information Note Banner
-                const InfoNoteCard(),
-                const SizedBox(height: 20),
-
-                // "Compare Data" Button
-                CustomPrimaryButton(
-                  text: AppConstants.compareData,
-                  icon: Icons.compare_arrows,
-                  isEnabled: provider.canCompare,
-                  isLoading: provider.isAnyLoading,
-                  onPressed: () => _navigateToComparison(context),
-                ),
-
-                const SizedBox(height: 24),
-              ],
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: AppColors.scaffoldBackground,
+        // APP BAR
+        appBar: CustomCurvedAppBar(
+          title: AppConstants.appName,
+          showLogo: true,
+          actions: [
+            Consumer<TextComparisonProvider>(
+              builder: (context, provider, child) {
+                return IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  tooltip: 'Clear All',
+                  onPressed: () => provider.clearAll(),
+                );
+              },
             ),
-          );
-        },
+          ],
+        ),
+
+        // BODY
+        body: Consumer<TextComparisonProvider>(
+          builder: (context, provider, child) {
+            final items = provider.readingItems;
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // USER PROFILE
+                  UserProfileHeader(),
+                  SizedBox(height: 18.h),
+                  // READING CARDS
+                  ...items.asMap().entries.map((entry) {
+                    final int index = entry.key;
+                    final item = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 14.h),
+                      child: CngReadingCard(
+                        item: item,
+                        // Only the FIRST card gets the selector.
+                        showSourceSelector: index == 0,
+                        selectedSource: provider.primarySourceMode,
+                        onSourceChanged: index == 0
+                            ? provider.setPrimarySourceMode
+                            : null,
+                        // Existing camera behavior remains intact.
+                        onCustomCameraRequested: () =>
+                            _openCamera(context, index),
+                        onImageCaptured: (file) {
+                          provider.setImage(index, file);
+                        },
+                        onTextChanged: (text) {
+                          provider.setText(index, text);
+                        },
+                      ),
+                    );
+                  }),
+                  SizedBox(height: 2.h),
+                  // DIVIDER
+                  Divider(color: AppColors.divider, height: 1),
+                  SizedBox(height: 16.h),
+                  // INFO NOTE
+                  InfoNoteCard(),
+                  SizedBox(height: 20.h),
+                  // COMPARE BUTTON
+                  CustomPrimaryButton(
+                    text: AppConstants.compareData,
+                    icon: Icons.compare_arrows,
+                    isEnabled: provider.canCompare,
+                    isLoading: provider.isAnyLoading,
+                    onPressed: () => _navigateToComparison(context),
+                  ),
+
+                  SizedBox(height: 8.h),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
