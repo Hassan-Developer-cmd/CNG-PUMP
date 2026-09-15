@@ -37,8 +37,7 @@ class ResultScreen extends StatelessWidget {
                         isRequired: false,
                         icon: Icons.image_outlined,
                         image: captured.image,
-                        inputData: captured.inputData,
-                      ))
+                                              ))
                   .toList();
 
           return Column(
@@ -159,25 +158,6 @@ class _ResultImageCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          SizedBox(height: 10.h),
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFCFDFD),
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(color: AppColors.borderLight),
-            ),
-            child: RichText(
-              text: TextSpan(
-                style: TextStyle(fontSize: 10.sp, color: AppColors.textPrimary),
-                children: [
-                  TextSpan(text: '${AppConstants.inputData}: ', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  TextSpan(text: item.inputData.isEmpty ? AppConstants.notProvided : item.inputData),
-                ],
-              ),
-            ),
           ),
           SizedBox(height: 10.h),
           ClipRRect(

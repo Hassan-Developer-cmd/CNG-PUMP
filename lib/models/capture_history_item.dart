@@ -18,7 +18,6 @@ class CaptureHistoryItem {
 class CapturedImage {
   final String label;
   final File image;
-  final String inputData;
 
-  CapturedImage({required this.label, required this.image, this.inputData = ''});
+  CapturedImage({required this.label, required this.image});
 }

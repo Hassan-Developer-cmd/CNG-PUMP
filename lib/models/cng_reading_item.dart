@@ -6,8 +6,12 @@ class CngReadingType {
   const CngReadingType._(this.value);
 
   static const digitalMachine = CngReadingType._('digitalMachine');
-  static const manualData = CngReadingType._('manualData');
+  static const counter = CngReadingType._('counter');
   static const microMotion = CngReadingType._('microMotion');
+  static const vb1 = CngReadingType._('vb1');
+  static const vs1 = CngReadingType._('vs1');
+  static const rFlow = CngReadingType._('rFlow');
+  static const manualData = CngReadingType._('manualData');
   static const suiGas = CngReadingType._('suiGas');
 }
 
@@ -19,7 +23,6 @@ class CngReadingItem {
   String title;
   IconData icon;
   File? image;
-  String inputData;
 
   CngReadingItem({
     required this.type,
@@ -27,16 +30,12 @@ class CngReadingItem {
     required this.isRequired,
     required this.icon,
     this.image,
-    this.inputData = '',
   });
 
   bool get hasImage => image != null;
-  bool get hasInputData => inputData.trim().isNotEmpty;
-  // Input Data is optional. A required item is complete once its picture is captured.
   bool get isComplete => isRequired ? hasImage : true;
 
   void reset() {
     image = null;
-    inputData = '';
   }
 }

@@ -36,19 +36,16 @@ class AppConstants {
 
   // Prompts & Labels
   static const String takePicture = 'Take Picture';
-  static const String viewResult = 'View Result';
+  static const String saveData = 'Save Data';
   static const String done = 'Done';
-  static const String inputData = 'Input Data';
-  static const String inputDataHint = 'Type Your Data.........';
-  static const String notProvided = 'Not Provided';
   static const String capturedPictures = 'CAPTURED PICTURES';
   static const String resultSubtitle =
       'Your captured pictures are shown below.';
 
   // Informational text
   static const String infoNoteText =
-      'Capture clear pictures of the required sources. Input Data is optional and can be entered if needed. '
-      'The captured pictures will be shown on the result screen.';
+      'Capture the sources in order. After each required picture, the next required picture must be captured within 2 minutes. '
+      'Micro Motion is optional.';
 
   static const String alignDisplayPrompt = 'Align display within frame';
 }

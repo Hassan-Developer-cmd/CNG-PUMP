@@ -28,10 +28,7 @@ class DashboardScreen extends StatelessWidget {
       MaterialPageRoute(builder: (context) => const CameraScreen()),
     );
     if (capturedFile != null && context.mounted) {
-      await context.read<CaptureProvider>().setImageByType(
-        type,
-        capturedFile,
-      );
+      await context.read<CaptureProvider>().setImageByType(type, capturedFile);
     }
   }
 
@@ -39,7 +36,7 @@ class DashboardScreen extends StatelessWidget {
     final provider = context.read<CaptureProvider>();
     final captured = provider.readingItems
         .where((item) => item.hasImage)
-        .map((item) => CapturedImage(label: item.title, image: item.image!, inputData: item.inputData))
+        .map((item) => CapturedImage(label: item.title, image: item.image!))
         .toList();
 
     context.read<HistoryProvider>().addCapture(images: captured);
@@ -55,7 +52,6 @@ class DashboardScreen extends StatelessWidget {
     return SafeArea(
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        // APP BAR
         appBar: CustomCurvedAppBar(
           title: AppConstants.appName,
           showLogo: true,
@@ -65,14 +61,12 @@ class DashboardScreen extends StatelessWidget {
                 return IconButton(
                   icon: const Icon(Icons.refresh, color: Colors.white),
                   tooltip: 'Clear All',
-                  onPressed: () => provider.clearAll(),
+                  onPressed: provider.clearAll,
                 );
               },
             ),
           ],
         ),
-
-        // BODY
         body: Consumer<CaptureProvider>(
           builder: (context, provider, child) {
             final items = provider.readingItems;
@@ -83,7 +77,6 @@ class DashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // USER PROFILE
                   UserProfileHeader(),
                   SizedBox(height: 18.h),
                   Row(
@@ -95,39 +88,78 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: 10.h),
+                  SizedBox(height: 12.h),
 
-                  // READING CARDS
-                  ...items.map((item) {
+                  if (provider.timerActive) ...[
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 9.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.lightTeal,
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: AppColors.primaryTeal.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 18.sp,
+                            color: AppColors.primaryTeal,
+                          ),
+                          SizedBox(width: 7.w),
+                          Expanded(
+                            child: Text(
+                              'Take the next picture within 2 minutes',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            provider.formattedRemainingTime,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primaryTeal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                  ],
+
+                  ...items.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
                     return Padding(
                       padding: EdgeInsets.only(bottom: 14.h),
                       child: CngReadingCard(
                         item: item,
+                        isCaptureEnabled: provider.canCapture(index),
                         onCustomCameraRequested: () =>
                             _openCamera(context, item.type),
-                        onImageCaptured: (file) =>
-                            provider.setImageByType(item.type, file),
-                        onInputDataChanged: (value) =>
-                            provider.setInputDataByType(item.type, value),
                       ),
                     );
                   }),
 
                   SizedBox(height: 2.h),
-                  // DIVIDER
                   Divider(color: AppColors.divider, height: 1),
                   SizedBox(height: 16.h),
-                  // INFO NOTE
                   InfoNoteCard(),
                   SizedBox(height: 20.h),
-                  // RESULT BUTTON
                   CustomPrimaryButton(
-                    text: AppConstants.viewResult,
-                    icon: Icons.arrow_forward_rounded,
+                    text: AppConstants.saveData,
+                    icon: Icons.compare_arrows,
                     isEnabled: provider.canViewResult,
                     onPressed: () => _navigateToResult(context),
                   ),
-
                   SizedBox(height: 8.h),
                 ],
               ),
