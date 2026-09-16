@@ -1,14 +1,27 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../widgets/camera/camera_control_bar.dart';
 import '../../widgets/camera/camera_viewfinder_frame.dart';
+
+/// Result returned after capturing or selecting an image.
+///
+/// Contains both the image file and the exact date/time at which
+/// the image was captured/selected.
+class CameraCaptureResult {
+  final File image;
+  final DateTime capturedAt;
+
+  const CameraCaptureResult({required this.image, required this.capturedAt});
+}
 
 class CameraScreen extends StatefulWidget {
   final String? title;
@@ -25,9 +38,12 @@ class _CameraScreenState extends State<CameraScreen>
 
   List<CameraDescription> _cameras = [];
   CameraController? _controller;
+
   int _selectedCameraIndex = 0;
+
   bool _isInitializing = true;
   String? _errorMessage;
+
   bool _isFlashOn = false;
   bool _isCapturing = false;
 
@@ -37,15 +53,18 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addObserver(this);
 
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
     );
+
     _laserAnimation = Tween<double>(begin: 0.08, end: 0.92).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
+
     _animController.repeat(reverse: true);
 
     _initializeCamera();
@@ -56,6 +75,7 @@ class _CameraScreenState extends State<CameraScreen>
     WidgetsBinding.instance.removeObserver(this);
     _animController.dispose();
     _controller?.dispose();
+
     super.dispose();
   }
 
@@ -74,13 +94,16 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   Future<void> _initializeCamera() async {
-    setState(() {
-      _isInitializing = true;
-      _errorMessage = null;
-    });
+    if (mounted) {
+      setState(() {
+        _isInitializing = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       _cameras = await availableCameras();
+
       if (_cameras.isEmpty) {
         if (mounted) {
           setState(() {
@@ -88,17 +111,20 @@ class _CameraScreenState extends State<CameraScreen>
             _errorMessage = 'No camera hardware detected on this device.';
           });
         }
+
         return;
       }
 
-      final backIndex = _cameras.indexWhere(
+      final int backIndex = _cameras.indexWhere(
         (camera) => camera.lensDirection == CameraLensDirection.back,
       );
+
       _selectedCameraIndex = backIndex != -1 ? backIndex : 0;
 
       await _startCameraController(_cameras[_selectedCameraIndex]);
     } catch (e) {
       debugPrint('[CameraScreen] Error listing cameras: $e');
+
       if (mounted) {
         setState(() {
           _isInitializing = false;
@@ -122,11 +148,13 @@ class _CameraScreenState extends State<CameraScreen>
 
     try {
       await cameraController.initialize();
+
       try {
         await cameraController.setFocusMode(FocusMode.auto);
       } catch (_) {
-        // Some devices don't support explicit auto focus calls
+        // Some devices do not support explicit auto-focus calls.
       }
+
       if (mounted) {
         setState(() {
           _isInitializing = false;
@@ -136,6 +164,7 @@ class _CameraScreenState extends State<CameraScreen>
       }
     } catch (e) {
       debugPrint('[CameraScreen] Camera controller initialization error: $e');
+
       if (mounted) {
         setState(() {
           _isInitializing = false;
@@ -146,13 +175,17 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   Future<void> _toggleFlash() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
+    final CameraController? controller = _controller;
+
+    if (controller == null || !controller.value.isInitialized) {
+      return;
+    }
 
     try {
       final bool newFlash = !_isFlashOn;
-      await _controller!.setFlashMode(
-        newFlash ? FlashMode.torch : FlashMode.off,
-      );
+
+      await controller.setFlashMode(newFlash ? FlashMode.torch : FlashMode.off);
+
       if (mounted) {
         setState(() {
           _isFlashOn = newFlash;
@@ -160,6 +193,7 @@ class _CameraScreenState extends State<CameraScreen>
       }
     } catch (e) {
       debugPrint('[CameraScreen] Flash mode error: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -171,9 +205,12 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   Future<void> _switchCamera() async {
-    if (_cameras.length < 2 || _isCapturing) return;
+    if (_cameras.length < 2 || _isCapturing) {
+      return;
+    }
 
-    final nextIndex = (_selectedCameraIndex + 1) % _cameras.length;
+    final int nextIndex = (_selectedCameraIndex + 1) % _cameras.length;
+
     _selectedCameraIndex = nextIndex;
 
     setState(() {
@@ -182,6 +219,7 @@ class _CameraScreenState extends State<CameraScreen>
     });
 
     await _controller?.dispose();
+
     await _startCameraController(_cameras[_selectedCameraIndex]);
   }
 
@@ -189,7 +227,9 @@ class _CameraScreenState extends State<CameraScreen>
 
   Rect _paddedCaptureWindow(Rect scanWindow) {
     final double padX = scanWindow.width * _cropPadding;
+
     final double padY = scanWindow.height * _cropPadding;
+
     return Rect.fromLTRB(
       scanWindow.left - padX,
       scanWindow.top - padY,
@@ -205,18 +245,22 @@ class _CameraScreenState extends State<CameraScreen>
   ) async {
     try {
       final Uint8List bytes = await photo.readAsBytes();
+
       img.Image? decoded = img.decodeImage(bytes);
+
       if (decoded == null) {
         return File(photo.path);
       }
 
-      // Bake orientation to handle camera sensor rotation (EXIF)
+      // Bake orientation to handle camera sensor rotation (EXIF).
       decoded = img.bakeOrientation(decoded);
 
       final double imageWidth = decoded.width.toDouble();
+
       final double imageHeight = decoded.height.toDouble();
 
       final double imageRatio = imageWidth / imageHeight;
+
       final double screenRatio = screenSize.width / screenSize.height;
 
       double scale;
@@ -224,28 +268,33 @@ class _CameraScreenState extends State<CameraScreen>
       double offsetY = 0;
 
       if (screenRatio < imageRatio) {
-        // Screen is taller than image aspect ratio (preview fits height)
+        // Screen is taller than image aspect ratio.
         scale = screenSize.height / imageHeight;
+
         offsetX = (imageWidth * scale - screenSize.width) / 2;
       } else {
-        // Screen is wider than image aspect ratio (preview fits width)
+        // Screen is wider than image aspect ratio.
         scale = screenSize.width / imageWidth;
+
         offsetY = (imageHeight * scale - screenSize.height) / 2;
       }
 
-      // Map screen coordinates to image pixels
+      // Map screen coordinates to image pixels.
       final int cropX = ((scanWindow.left + offsetX) / scale).round().clamp(
         0,
         decoded.width - 1,
       );
+
       final int cropY = ((scanWindow.top + offsetY) / scale).round().clamp(
         0,
         decoded.height - 1,
       );
+
       final int cropW = (scanWindow.width / scale).round().clamp(
         1,
         decoded.width - cropX,
       );
+
       final int cropH = (scanWindow.height / scale).round().clamp(
         1,
         decoded.height - cropY,
@@ -260,26 +309,34 @@ class _CameraScreenState extends State<CameraScreen>
       );
 
       final List<int> encodedBytes = img.encodeJpg(cropped, quality: 100);
+
       final Directory tempDir = Directory.systemTemp;
+
       final String targetPath =
-          '${tempDir.path}/cropped_meter_${DateTime.now().microsecondsSinceEpoch}.jpg';
+          '${tempDir.path}/cropped_meter_'
+          '${DateTime.now().microsecondsSinceEpoch}.jpg';
+
       final File resultFile = File(targetPath);
+
       await resultFile.writeAsBytes(encodedBytes);
 
       debugPrint(
-        '[CameraScreen] Cropped image to scan window: $cropW x $cropH at ($cropX, $cropY)',
+        '[CameraScreen] Cropped image to scan window: '
+        '$cropW x $cropH at ($cropX, $cropY)',
       );
+
       return resultFile;
     } catch (e, st) {
       debugPrint('[CameraScreen] Error cropping image: $e\n$st');
+
       return File(photo.path);
     }
   }
 
   Future<void> _takePicture(Rect scanWindow, Size screenSize) async {
-    if (_controller == null ||
-        !_controller!.value.isInitialized ||
-        _isCapturing) {
+    final CameraController? controller = _controller;
+
+    if (controller == null || !controller.value.isInitialized || _isCapturing) {
       return;
     }
 
@@ -288,8 +345,14 @@ class _CameraScreenState extends State<CameraScreen>
     });
 
     try {
-      final XFile photo = await _controller!.takePicture();
+      // Record the timestamp at the moment the user takes
+      // the picture.
+      final DateTime capturedAt = DateTime.now();
+
+      final XFile photo = await controller.takePicture();
+
       final Rect captureWindow = _paddedCaptureWindow(scanWindow);
+
       final File croppedFile = await _cropImageToScanWindow(
         photo,
         captureWindow,
@@ -297,14 +360,18 @@ class _CameraScreenState extends State<CameraScreen>
       );
 
       if (mounted) {
-        Navigator.of(context).pop(croppedFile);
+        Navigator.of(
+          context,
+        ).pop(CameraCaptureResult(image: croppedFile, capturedAt: capturedAt));
       }
     } catch (e) {
       debugPrint('[CameraScreen] Error taking picture: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Failed to take picture: $e')));
+
         setState(() {
           _isCapturing = false;
         });
@@ -313,7 +380,9 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   Future<void> _pickFromGallery() async {
-    if (_isCapturing) return;
+    if (_isCapturing) {
+      return;
+    }
 
     try {
       final XFile? photo = await _picker.pickImage(
@@ -324,7 +393,13 @@ class _CameraScreenState extends State<CameraScreen>
       );
 
       if (photo != null && mounted) {
-        Navigator.of(context).pop(File(photo.path));
+        // For gallery images, this records when the image was
+        // selected in the app.
+        final DateTime capturedAt = DateTime.now();
+
+        Navigator.of(context).pop(
+          CameraCaptureResult(image: File(photo.path), capturedAt: capturedAt),
+        );
       }
     } catch (e) {
       debugPrint('[CameraScreen] Gallery pick error: $e');
@@ -332,7 +407,8 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   Widget _buildCameraPreview() {
-    final controller = _controller;
+    final CameraController? controller = _controller;
+
     if (controller == null || !controller.value.isInitialized) {
       return Container(color: Colors.black);
     }
@@ -354,14 +430,18 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   Widget build(BuildContext context) {
     final String screenTitle = widget.title ?? AppConstants.scanMeterTitle;
+
     final Size screenSize = MediaQuery.of(context).size;
 
-    // Responsive scanner window geometry matching reference screenshot
+    // Responsive scanner window geometry.
     final double windowWidth = screenSize.width * 0.88;
+
     const double windowHeight = 230.0;
+
     final double windowLeft = (screenSize.width - windowWidth) / 2;
-    // Slightly offset vertically to balance space between top pill and bottom controls
+
     final double windowTop = (screenSize.height - windowHeight) / 2 - 30;
+
     final Rect scanWindowRect = Rect.fromLTWH(
       windowLeft,
       windowTop,
@@ -374,7 +454,7 @@ class _CameraScreenState extends State<CameraScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Layer 1: Live Camera Feed or Fallback Background
+          // Layer 1: Live Camera Feed or Fallback Background.
           if (!_isInitializing && _errorMessage == null)
             _buildCameraPreview()
           else
@@ -388,30 +468,28 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-          // Layer 2: Dark Mask Overlay Outside Scanner Square (matching reference image)
+          // Layer 2: Dark Mask Outside Scanner Window.
           if (!_isInitializing && _errorMessage == null)
             CustomPaint(
               size: screenSize,
               painter: ScannerOverlayPainter(
                 scanWindow: scanWindowRect,
-                overlayColor: const Color(0xE802352C), // Dark teal scrim
+                overlayColor: const Color(0xE802352C),
                 borderRadius: 8.0,
               ),
             ),
 
-          // Layer 3: Scanner Frame (Corner Brackets & Animated Laser Line)
+          // Layer 3: Scanner Frame and Laser.
           if (!_isInitializing && _errorMessage == null)
             Positioned.fromRect(
               rect: scanWindowRect,
               child: Stack(
                 children: [
-                  // Corner Brackets
                   CustomPaint(
                     size: Size.infinite,
                     painter: CornerBracketsPainter(),
                   ),
 
-                  // Animated Horizontal Scan Laser Line
                   AnimatedBuilder(
                     animation: _laserAnimation,
                     builder: (context, child) {
@@ -444,7 +522,7 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-          // Layer 4: "Align display within frame" Pill Guide
+          // Layer 4: Alignment Guide.
           if (!_isInitializing && _errorMessage == null)
             Positioned(
               top: scanWindowRect.top - 52,
@@ -479,11 +557,11 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
-          // Layer 5: Top Bar & Bottom Controls (or Loading / Error State)
+          // Layer 5: Top Bar and Controls.
           SafeArea(
             child: Column(
               children: [
-                // Top Bar with Close, Title, and Flashlight
+                // Top Bar.
                 Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 16.w,
@@ -501,6 +579,7 @@ class _CameraScreenState extends State<CameraScreen>
                         tooltip: 'Close',
                         onPressed: () => Navigator.of(context).pop(),
                       ),
+
                       Text(
                         screenTitle,
                         style: TextStyle(
@@ -509,6 +588,7 @@ class _CameraScreenState extends State<CameraScreen>
                           color: Colors.white,
                         ),
                       ),
+
                       IconButton(
                         icon: Icon(
                           _isFlashOn
@@ -526,14 +606,16 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                // Middle area: Loading or Error States (if camera unavailable)
+                // Middle Area.
                 Expanded(
                   child: Center(
                     child: _isInitializing
                         ? Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              CircularProgressIndicator(color: Colors.white),
+                              const CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
                               SizedBox(height: 16.h),
                               Text(
                                 'Starting camera...',
@@ -583,7 +665,9 @@ class _CameraScreenState extends State<CameraScreen>
                                       onPressed: _pickFromGallery,
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.white,
-                                        side: BorderSide(color: Colors.white),
+                                        side: const BorderSide(
+                                          color: Colors.white,
+                                        ),
                                       ),
                                       icon: Icon(Icons.history, size: 18.sp),
                                       label: const Text('Gallery'),
@@ -597,7 +681,7 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                // Bottom Control Bar
+                // Bottom Control Bar.
                 CameraControlBar(
                   onCapture: () => _takePicture(scanWindowRect, screenSize),
                   onHistoryOrGallery: _pickFromGallery,
@@ -608,7 +692,7 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // Layer 6: Capturing & Cropping Loading Overlay
+          // Layer 6: Capturing/Cropping Overlay.
           if (_isCapturing)
             Container(
               color: Colors.black.withValues(alpha: 0.6),
@@ -616,8 +700,8 @@ class _CameraScreenState extends State<CameraScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
+                    const CircularProgressIndicator(color: Colors.white),
+                    const SizedBox(height: 16),
                     Text(
                       'Capturing...',
                       style: TextStyle(
@@ -636,7 +720,8 @@ class _CameraScreenState extends State<CameraScreen>
   }
 }
 
-/// Custom painter that masks everything OUTSIDE the scanner window.
+/// Custom painter that masks everything outside
+/// the scanner window.
 class ScannerOverlayPainter extends CustomPainter {
   final Rect scanWindow;
   final Color overlayColor;
@@ -650,22 +735,21 @@ class ScannerOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final backgroundPath = Path()
+    final Path backgroundPath = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    final windowPath = Path()
+    final Path windowPath = Path()
       ..addRRect(
         RRect.fromRectAndRadius(scanWindow, Radius.circular(borderRadius)),
       );
 
-    // Subtract the scan window from the full-screen background
-    final cutPath = Path.combine(
+    final Path cutPath = Path.combine(
       PathOperation.difference,
       backgroundPath,
       windowPath,
     );
 
-    final paint = Paint()
+    final Paint paint = Paint()
       ..color = overlayColor
       ..style = PaintingStyle.fill;
 

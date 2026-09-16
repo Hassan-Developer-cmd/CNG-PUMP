@@ -20,9 +20,14 @@ enum PrimarySourceMode { nozzle, meter }
 class CngReadingItem {
   final CngReadingType type;
   final bool isRequired;
+
   String title;
   IconData icon;
+
   File? image;
+
+  // Date and time when this picture was captured.
+  DateTime? capturedAt;
 
   CngReadingItem({
     required this.type,
@@ -30,12 +35,15 @@ class CngReadingItem {
     required this.isRequired,
     required this.icon,
     this.image,
+    this.capturedAt,
   });
 
   bool get hasImage => image != null;
+
   bool get isComplete => isRequired ? hasImage : true;
 
   void reset() {
     image = null;
+    capturedAt = null;
   }
 }

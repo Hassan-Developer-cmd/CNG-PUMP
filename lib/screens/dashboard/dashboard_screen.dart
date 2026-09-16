@@ -1,15 +1,13 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
+import '../../models/capture_history_item.dart';
 import '../../models/cng_reading_item.dart';
 import '../../providers/capture_provider.dart';
 import '../../providers/history_provider.dart';
-import '../../models/capture_history_item.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
 import '../../widgets/shared_widgets/custom_primary_button.dart';
 import '../../widgets/shared_widgets/source_selector_dropdown.dart';
@@ -23,28 +21,49 @@ class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   Future<void> _openCamera(BuildContext context, CngReadingType type) async {
-    final File? capturedFile = await Navigator.push<File?>(
-      context,
-      MaterialPageRoute(builder: (context) => const CameraScreen()),
-    );
-    if (capturedFile != null && context.mounted) {
-      await context.read<CaptureProvider>().setImageByType(type, capturedFile);
+    final CameraCaptureResult? result =
+        await Navigator.push<CameraCaptureResult>(
+          context,
+          MaterialPageRoute(builder: (context) => const CameraScreen()),
+        );
+
+    if (result != null && context.mounted) {
+      await context.read<CaptureProvider>().setImageByType(
+        type,
+        result.image,
+        result.capturedAt,
+      );
     }
   }
 
-  void _navigateToResult(BuildContext context) {
+  Future<void> _navigateToResult(BuildContext context) async {
     final provider = context.read<CaptureProvider>();
+
     final captured = provider.readingItems
-        .where((item) => item.hasImage)
-        .map((item) => CapturedImage(label: item.title, image: item.image!))
+        .where((item) => item.hasImage && item.capturedAt != null)
+        .map(
+          (item) => CapturedImage(
+            label: item.title,
+            image: item.image!,
+            capturedAt: item.capturedAt!,
+          ),
+        )
         .toList();
 
+    // Save a separate history record.
     context.read<HistoryProvider>().addCapture(images: captured);
 
-    Navigator.push(
+    // Open ResultScreen.
+    await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const ResultScreen()),
     );
+
+    // User has returned from ResultScreen.
+    // Wipe ONLY the active Dashboard capture state.
+    if (context.mounted) {
+      provider.clearAll();
+    }
   }
 
   @override
