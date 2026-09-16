@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:typed_data';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,13 +8,10 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
+import '../../services/image_timestamp_service.dart';
 import '../../widgets/camera/camera_control_bar.dart';
 import '../../widgets/camera/camera_viewfinder_frame.dart';
 
-/// Result returned after capturing or selecting an image.
-///
-/// Contains both the image file and the exact date/time at which
-/// the image was captured/selected.
 class CameraCaptureResult {
   final File image;
   final DateTime capturedAt;
@@ -38,15 +34,11 @@ class _CameraScreenState extends State<CameraScreen>
 
   List<CameraDescription> _cameras = [];
   CameraController? _controller;
-
   int _selectedCameraIndex = 0;
-
   bool _isInitializing = true;
   String? _errorMessage;
-
   bool _isFlashOn = false;
   bool _isCapturing = false;
-
   late final AnimationController _animController;
   late final Animation<double> _laserAnimation;
 
@@ -82,6 +74,7 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final CameraController? cameraController = _controller;
+
     if (cameraController == null || !cameraController.value.isInitialized) {
       return;
     }
@@ -252,15 +245,11 @@ class _CameraScreenState extends State<CameraScreen>
         return File(photo.path);
       }
 
-      // Bake orientation to handle camera sensor rotation (EXIF).
+      // Bake orientation before cropping.
       decoded = img.bakeOrientation(decoded);
-
       final double imageWidth = decoded.width.toDouble();
-
       final double imageHeight = decoded.height.toDouble();
-
       final double imageRatio = imageWidth / imageHeight;
-
       final double screenRatio = screenSize.width / screenSize.height;
 
       double scale;
@@ -268,18 +257,15 @@ class _CameraScreenState extends State<CameraScreen>
       double offsetY = 0;
 
       if (screenRatio < imageRatio) {
-        // Screen is taller than image aspect ratio.
         scale = screenSize.height / imageHeight;
 
         offsetX = (imageWidth * scale - screenSize.width) / 2;
       } else {
-        // Screen is wider than image aspect ratio.
         scale = screenSize.width / imageWidth;
 
         offsetY = (imageHeight * scale - screenSize.height) / 2;
       }
 
-      // Map screen coordinates to image pixels.
       final int cropX = ((scanWindow.left + offsetX) / scale).round().clamp(
         0,
         decoded.width - 1,
@@ -309,15 +295,12 @@ class _CameraScreenState extends State<CameraScreen>
       );
 
       final List<int> encodedBytes = img.encodeJpg(cropped, quality: 100);
-
       final Directory tempDir = Directory.systemTemp;
-
       final String targetPath =
           '${tempDir.path}/cropped_meter_'
           '${DateTime.now().microsecondsSinceEpoch}.jpg';
 
       final File resultFile = File(targetPath);
-
       await resultFile.writeAsBytes(encodedBytes);
 
       debugPrint(
@@ -345,24 +328,26 @@ class _CameraScreenState extends State<CameraScreen>
     });
 
     try {
-      // Record the timestamp at the moment the user takes
-      // the picture.
+      // Capture the exact time when the user takes the picture.
       final DateTime capturedAt = DateTime.now();
-
       final XFile photo = await controller.takePicture();
-
       final Rect captureWindow = _paddedCaptureWindow(scanWindow);
-
+      // First crop the captured image.
       final File croppedFile = await _cropImageToScanWindow(
         photo,
         captureWindow,
         screenSize,
       );
 
+      final File timestampedFile = await ImageTimestampService.addTimestamp(
+        croppedFile,
+        capturedAt: capturedAt,
+      );
+
       if (mounted) {
-        Navigator.of(
-          context,
-        ).pop(CameraCaptureResult(image: croppedFile, capturedAt: capturedAt));
+        Navigator.of(context).pop(
+          CameraCaptureResult(image: timestampedFile, capturedAt: capturedAt),
+        );
       }
     } catch (e) {
       debugPrint('[CameraScreen] Error taking picture: $e');
@@ -393,16 +378,26 @@ class _CameraScreenState extends State<CameraScreen>
       );
 
       if (photo != null && mounted) {
-        // For gallery images, this records when the image was
-        // selected in the app.
         final DateTime capturedAt = DateTime.now();
-
-        Navigator.of(context).pop(
-          CameraCaptureResult(image: File(photo.path), capturedAt: capturedAt),
+        final File timestampedFile = await ImageTimestampService.addTimestamp(
+          File(photo.path),
+          capturedAt: capturedAt,
         );
+
+        if (mounted) {
+          Navigator.of(context).pop(
+            CameraCaptureResult(image: timestampedFile, capturedAt: capturedAt),
+          );
+        }
       }
     } catch (e) {
       debugPrint('[CameraScreen] Gallery pick error: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to select image: $e')));
+      }
     }
   }
 
@@ -430,18 +425,11 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   Widget build(BuildContext context) {
     final String screenTitle = widget.title ?? AppConstants.scanMeterTitle;
-
     final Size screenSize = MediaQuery.of(context).size;
-
-    // Responsive scanner window geometry.
     final double windowWidth = screenSize.width * 0.88;
-
     const double windowHeight = 230.0;
-
     final double windowLeft = (screenSize.width - windowWidth) / 2;
-
     final double windowTop = (screenSize.height - windowHeight) / 2 - 30;
-
     final Rect scanWindowRect = Rect.fromLTWH(
       windowLeft,
       windowTop,
@@ -449,8 +437,13 @@ class _CameraScreenState extends State<CameraScreen>
       windowHeight,
     );
 
-    return Scaffold(
-      backgroundColor: Colors.black,
+    return PopScope(
+      canPop: !_isCapturing,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -489,7 +482,6 @@ class _CameraScreenState extends State<CameraScreen>
                     size: Size.infinite,
                     painter: CornerBracketsPainter(),
                   ),
-
                   AnimatedBuilder(
                     animation: _laserAnimation,
                     builder: (context, child) {
@@ -579,7 +571,6 @@ class _CameraScreenState extends State<CameraScreen>
                         tooltip: 'Close',
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-
                       Text(
                         screenTitle,
                         style: TextStyle(
@@ -588,7 +579,6 @@ class _CameraScreenState extends State<CameraScreen>
                           color: Colors.white,
                         ),
                       ),
-
                       IconButton(
                         icon: Icon(
                           _isFlashOn
@@ -716,12 +706,11 @@ class _CameraScreenState extends State<CameraScreen>
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
-/// Custom painter that masks everything outside
-/// the scanner window.
 class ScannerOverlayPainter extends CustomPainter {
   final Rect scanWindow;
   final Color overlayColor;

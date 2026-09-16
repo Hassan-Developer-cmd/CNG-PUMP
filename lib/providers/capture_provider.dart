@@ -11,6 +11,8 @@ class CaptureProvider extends ChangeNotifier {
 
   Timer? _captureTimer;
   int _remainingSeconds = captureTimeoutSeconds;
+  bool _isTimerRemoved = false;
+
   CaptureProvider() {
     _buildItemsForMode(_primarySourceMode);
   }
@@ -19,6 +21,9 @@ class CaptureProvider extends ChangeNotifier {
   List<CngReadingItem> get readingItems => List.unmodifiable(_cngItems);
   int get remainingSeconds => _remainingSeconds;
   bool get timerActive => _captureTimer?.isActive ?? false;
+
+  /// Returns true if the timer is actively running and has not been stopped/removed by Save Data.
+  bool get isTimerVisible => timerActive && !_isTimerRemoved;
 
   String get formattedRemainingTime {
     final minutes = _remainingSeconds ~/ 60;
@@ -38,19 +43,7 @@ class CaptureProvider extends ChangeNotifier {
   }
 
   bool canCapture(int index) {
-    if (index < 0 || index >= _cngItems.length) {
-      return false;
-    }
-    // Retake is allowed.
-    if (_cngItems[index].hasImage) {
-      return true;
-    }
-
-    // The next required picture is available.
-    if (index == nextCaptureIndex) {
-      return true;
-    }
-    return index == 2 && _cngItems[0].hasImage && _cngItems[1].hasImage;
+    return index >= 0 && index < _cngItems.length;
   }
 
   void _buildItemsForMode(PrimarySourceMode mode) {
@@ -106,6 +99,7 @@ class CaptureProvider extends ChangeNotifier {
       return;
     }
     _stopTimer();
+    _isTimerRemoved = false;
     _primarySourceMode = mode;
     _buildItemsForMode(mode);
     _resetTimerValue();
@@ -113,7 +107,15 @@ class CaptureProvider extends ChangeNotifier {
   }
 
   CngReadingItem getItemByType(CngReadingType type) {
-    return _cngItems.firstWhere((item) => item.type == type);
+    return _cngItems.firstWhere(
+      (item) => item.type == type,
+      orElse: () => CngReadingItem(
+        type: type,
+        title: type.value,
+        isRequired: false,
+        icon: Icons.speed_outlined,
+      ),
+    );
   }
 
   File? getImage(int index) {
@@ -131,23 +133,16 @@ class CaptureProvider extends ChangeNotifier {
     if (index < 0 || index >= _cngItems.length) {
       return;
     }
-    if (!canCapture(index)) {
-      return;
-    }
 
-    final bool wasEmpty = !_cngItems[index].hasImage;
     _cngItems[index].image = image;
 
     // Store the capture timestamp.
     _cngItems[index].capturedAt = capturedAt;
-    if (wasEmpty && _cngItems[index].isRequired) {
-      final int nextRequired = nextCaptureIndex;
 
-      if (nextRequired != -1) {
-        _startTimer();
-      } else {
-        _stopTimer();
-      }
+    // Start timer on capture process start if not already active and not saved.
+    // The timer continues counting down continuously until Save Data is clicked.
+    if (!timerActive && !_isTimerRemoved) {
+      _startTimer();
     }
     notifyListeners();
   }
@@ -182,22 +177,27 @@ class CaptureProvider extends ChangeNotifier {
     _cngItems[index].image = null;
     _cngItems[index].capturedAt = null;
 
-    _stopTimer();
-    _resetTimerValue();
-
-    // If a required picture is removed while the previous
-    // required picture still exists, restart the timer.
-    if (index > 0 &&
-        _cngItems[index - 1].hasImage &&
-        _cngItems[index].isRequired) {
-      _startTimer();
+    final bool hasAnyImage = _cngItems.any((item) => item.hasImage);
+    if (!hasAnyImage) {
+      _stopTimer();
+      _resetTimerValue();
+      _isTimerRemoved = false;
     }
+    notifyListeners();
+  }
+
+  /// Explicitly stops the countdown timer and removes it from the UI.
+  /// Called when the user clicks 'Save Data'.
+  void stopAndRemoveTimer() {
+    _stopTimer();
+    _isTimerRemoved = true;
     notifyListeners();
   }
 
   // Clears all pictures and timestamps.
   void clearAll() {
     _stopTimer();
+    _isTimerRemoved = false;
 
     for (final item in _cngItems) {
       item.reset();
@@ -209,6 +209,7 @@ class CaptureProvider extends ChangeNotifier {
   void _startTimer() {
     _captureTimer?.cancel();
     _remainingSeconds = captureTimeoutSeconds;
+    _isTimerRemoved = false;
     _captureTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds <= 1) {
         timer.cancel();
@@ -223,6 +224,7 @@ class CaptureProvider extends ChangeNotifier {
   }
 
   void _clearExpiredCapture() {
+    _isTimerRemoved = false;
     for (final item in _cngItems) {
       item.reset();
     }

@@ -50,7 +50,7 @@ class HistoryCard extends StatelessWidget {
               ),
               SizedBox(height: 12.h),
               SizedBox(
-                height: 82.h,
+                height: 100.h,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: record.images.length,
@@ -58,7 +58,7 @@ class HistoryCard extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final captured = record.images[index];
                     return SizedBox(
-                      width: 100.w,
+                      width: 110.w,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -67,7 +67,7 @@ class HistoryCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8.r),
                               child: Image.file(
                                 captured.image,
-                                width: 100.w,
+                                width: 110.w,
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -77,7 +77,34 @@ class HistoryCard extends StatelessWidget {
                             captured.label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 9.sp, color: AppColors.textSecondary),
+                            style: TextStyle(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_outlined,
+                                size: 8.sp,
+                                color: AppColors.primaryTeal,
+                              ),
+                              SizedBox(width: 2.w),
+                              Expanded(
+                                child: Text(
+                                  captured.formattedCapturedAt,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 7.5.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.primaryTeal,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

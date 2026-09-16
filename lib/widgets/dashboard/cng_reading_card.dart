@@ -7,6 +7,7 @@ import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../constants/app_typography.dart';
 import '../../models/cng_reading_item.dart';
+import '../../services/image_timestamp_service.dart';
 import '../shared_widgets/dashed_border_box.dart';
 import '../shared_widgets/status_badge.dart';
 
@@ -66,6 +67,39 @@ class CngReadingCard extends StatelessWidget {
               Expanded(
                 child: Text(item.title, style: AppTypography.sectionTitle),
               ),
+              if (item.capturedAt != null) ...[
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryTeal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6.r),
+                    border: Border.all(
+                      color: AppColors.primaryTeal.withValues(alpha: 0.3),
+                      width: 0.7,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time_outlined,
+                        color: AppColors.primaryTeal,
+                        size: 10.sp,
+                      ),
+                      SizedBox(width: 3.w),
+                      Text(
+                        ImageTimestampService.formatTimestamp(item.capturedAt!),
+                        style: TextStyle(
+                          color: AppColors.primaryTeal,
+                          fontSize: 8.5.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 6.w),
+              ],
               StatusBadge(isRequired: item.isRequired),
             ],
           ),
@@ -119,7 +153,7 @@ class CngReadingCard extends StatelessWidget {
         ),
         SizedBox(height: 5.h),
         Text(
-          disabled ? 'Take previous picture first' : AppConstants.takePicture,
+          AppConstants.takePicture,
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 10.sp,
@@ -138,7 +172,8 @@ class CngReadingCard extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Image.file(image, fit: BoxFit.cover),
-          Container(color: Colors.black.withValues(alpha: 0.22)),
+          Container(color: Colors.black.withValues(alpha: 0.15)),
+
           Positioned(
             right: 7.w,
             bottom: 7.h,

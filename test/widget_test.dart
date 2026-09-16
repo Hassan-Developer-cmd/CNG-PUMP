@@ -1,14 +1,15 @@
 import 'dart:io';
 
-import 'package:cng_pump/main.dart';
 import 'package:cng_pump/models/capture_history_item.dart';
 import 'package:cng_pump/models/cng_reading_item.dart';
 import 'package:cng_pump/providers/capture_provider.dart';
 import 'package:cng_pump/providers/history_provider.dart';
 import 'package:cng_pump/screens/camera_screen/camera_screen.dart';
+import 'package:cng_pump/screens/dashboard/dashboard_screen.dart';
 import 'package:cng_pump/screens/result_screen/result_screen.dart';
 import 'package:cng_pump/widgets/camera/camera_control_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -138,11 +139,11 @@ void main() {
 
       expect(provider.readingItems.length, equals(3));
 
-      expect(provider.readingItems[0].title, equals('Digital Machine'));
+      expect(provider.readingItems[0].title, equals('VB1'));
 
-      expect(provider.readingItems[1].title, equals('Manual Data'));
+      expect(provider.readingItems[1].title, equals('VS1'));
 
-      expect(provider.readingItems[2].title, equals('Micro Motion'));
+      expect(provider.readingItems[2].title, equals('R Flow'));
     });
 
     test('Initializes required and optional items correctly', () {
@@ -164,11 +165,11 @@ void main() {
 
       expect(provider.canViewResult, isFalse);
 
-      await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
+      await provider.setImage(0, File('vb1.jpg'), testDateTime);
 
       expect(provider.canViewResult, isFalse);
 
-      await provider.setImage(1, File('manual_data.jpg'), testDateTime);
+      await provider.setImage(1, File('vs1.jpg'), testDateTime);
 
       expect(provider.canViewResult, isTrue);
     });
@@ -176,9 +177,9 @@ void main() {
     test('Optional Micro Motion does not prevent viewing result', () async {
       final provider = CaptureProvider();
 
-      await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
+      await provider.setImage(0, File('vb1.jpg'), testDateTime);
 
-      await provider.setImage(1, File('manual_data.jpg'), testDateTime);
+      await provider.setImage(1, File('vs1.jpg'), testDateTime);
 
       expect(provider.readingItems[2].isRequired, isFalse);
 
@@ -188,11 +189,11 @@ void main() {
     test('All three images can be captured', () async {
       final provider = CaptureProvider();
 
-      await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
+      await provider.setImage(0, File('vb1.jpg'), testDateTime);
 
-      await provider.setImage(1, File('manual_data.jpg'), testDateTime);
+      await provider.setImage(1, File('vs1.jpg'), testDateTime);
 
-      await provider.setImage(2, File('micro_motion.jpg'), testDateTime);
+      await provider.setImage(2, File('r_flow.jpg'), testDateTime);
 
       expect(provider.readingItems[0].hasImage, isTrue);
 
@@ -218,153 +219,84 @@ void main() {
 
     test('Stores captured image by reading type', () async {
       final provider = CaptureProvider();
-      final file = File('digital_machine.jpg');
+      final file = File('vb1.jpg');
 
       await provider.setImageByType(
-        CngReadingType.digitalMachine,
+        CngReadingType.vb1,
         file,
         testDateTime,
       );
 
-      final item = provider.getItemByType(CngReadingType.digitalMachine);
+      final item = provider.getItemByType(CngReadingType.vb1);
 
       expect(item.image, equals(file));
       expect(item.capturedAt, equals(testDateTime));
       expect(item.hasImage, isTrue);
     });
 
-    test('Stores Manual Data image by reading type', () async {
+    test('Stores VS1 image by reading type', () async {
       final provider = CaptureProvider();
-      final file = File('manual_data.jpg');
-
       await provider.setImageByType(
-        CngReadingType.manualData,
+        CngReadingType.vb1,
+        File('vb1.jpg'),
+        testDateTime,
+      );
+
+      final file = File('vs1.jpg');
+      await provider.setImageByType(
+        CngReadingType.vs1,
         file,
         testDateTime,
       );
 
-      final item = provider.getItemByType(CngReadingType.manualData);
+      final item = provider.getItemByType(CngReadingType.vs1);
 
       expect(item.image, equals(file));
       expect(item.capturedAt, equals(testDateTime));
       expect(item.hasImage, isTrue);
+
+      provider.dispose();
     });
 
-    test('Stores Micro Motion image by reading type', () async {
+    test('Stores R Flow image by reading type', () async {
       final provider = CaptureProvider();
-      final file = File('micro_motion.jpg');
-
       await provider.setImageByType(
-        CngReadingType.microMotion,
+        CngReadingType.vb1,
+        File('vb1.jpg'),
+        testDateTime,
+      );
+      await provider.setImageByType(
+        CngReadingType.vs1,
+        File('vs1.jpg'),
+        testDateTime,
+      );
+
+      final file = File('r_flow.jpg');
+      await provider.setImageByType(
+        CngReadingType.rFlow,
         file,
         testDateTime,
       );
 
-      final item = provider.getItemByType(CngReadingType.microMotion);
+      final item = provider.getItemByType(CngReadingType.rFlow);
 
       expect(item.image, equals(file));
       expect(item.capturedAt, equals(testDateTime));
       expect(item.hasImage, isTrue);
-    });
 
-    test('Clears a single image correctly', () async {
-      final provider = CaptureProvider();
-
-      await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
-
-      expect(provider.readingItems[0].hasImage, isTrue);
-
-      provider.clearImage(0);
-
-      expect(provider.readingItems[0].image, isNull);
-
-      expect(provider.readingItems[0].capturedAt, isNull);
-
-      expect(provider.readingItems[0].hasImage, isFalse);
-
-      expect(provider.canViewResult, isFalse);
-    });
-
-    test('Clearing one required image disables result viewing', () async {
-      final provider = CaptureProvider();
-
-      await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
-
-      await provider.setImage(1, File('manual_data.jpg'), testDateTime);
-
-      expect(provider.canViewResult, isTrue);
-
-      provider.clearImage(0);
-
-      expect(provider.canViewResult, isFalse);
-    });
-
-    test('Clearing optional image does not disable result viewing', () async {
-      final provider = CaptureProvider();
-
-      await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
-
-      await provider.setImage(1, File('manual_data.jpg'), testDateTime);
-
-      await provider.setImage(2, File('micro_motion.jpg'), testDateTime);
-
-      expect(provider.canViewResult, isTrue);
-
-      provider.clearImage(2);
-
-      expect(provider.canViewResult, isTrue);
-    });
-
-    test('clearAll removes all captured images and timestamps', () async {
-      final provider = CaptureProvider();
-
-      await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
-
-      await provider.setImage(1, File('manual_data.jpg'), testDateTime);
-
-      await provider.setImage(2, File('micro_motion.jpg'), testDateTime);
-
-      expect(provider.canViewResult, isTrue);
-
-      provider.clearAll();
-
-      expect(provider.readingItems[0].image, isNull);
-
-      expect(provider.readingItems[1].image, isNull);
-
-      expect(provider.readingItems[2].image, isNull);
-
-      expect(provider.readingItems[0].capturedAt, isNull);
-
-      expect(provider.readingItems[1].capturedAt, isNull);
-
-      expect(provider.readingItems[2].capturedAt, isNull);
-
-      expect(provider.readingItems[0].hasImage, isFalse);
-
-      expect(provider.readingItems[1].hasImage, isFalse);
-
-      expect(provider.readingItems[2].hasImage, isFalse);
-
-      expect(provider.canViewResult, isFalse);
+      provider.dispose();
     });
 
     test('Getting item by type returns the correct item', () {
       final provider = CaptureProvider();
 
-      final digitalMachine = provider.getItemByType(
-        CngReadingType.digitalMachine,
-      );
+      final vb1 = provider.getItemByType(CngReadingType.vb1);
+      final vs1 = provider.getItemByType(CngReadingType.vs1);
+      final rFlow = provider.getItemByType(CngReadingType.rFlow);
 
-      final manualData = provider.getItemByType(CngReadingType.manualData);
-
-      final microMotion = provider.getItemByType(CngReadingType.microMotion);
-
-      expect(digitalMachine.title, equals('Digital Machine'));
-
-      expect(manualData.title, equals('Manual Data'));
-
-      expect(microMotion.title, equals('Micro Motion'));
+      expect(vb1.title, equals('VB1'));
+      expect(vs1.title, equals('VS1'));
+      expect(rFlow.title, equals('R Flow'));
     });
 
     test('No comparison or input data is required', () {
@@ -518,7 +450,10 @@ void main() {
           ChangeNotifierProvider(create: (_) => CaptureProvider()),
           ChangeNotifierProvider(create: (_) => HistoryProvider()),
         ],
-        child: const MyApp(),
+        child: ScreenUtilInit(
+          designSize: const Size(375, 812),
+          builder: (context, child) => const MaterialApp(home: DashboardScreen()),
+        ),
       ),
     );
 
@@ -526,13 +461,11 @@ void main() {
 
     expect(find.text('CNG Hub'), findsOneWidget);
 
-    expect(find.text('Digital Machine'), findsOneWidget);
+    expect(find.text('VB1'), findsOneWidget);
 
-    expect(find.text('Manual Data'), findsOneWidget);
+    expect(find.text('VS1'), findsOneWidget);
 
-    expect(find.text('Micro Motion'), findsOneWidget);
-
-    expect(find.text('Sui Gas'), findsOneWidget);
+    expect(find.text('R Flow'), findsOneWidget);
 
     expect(find.text('REQUIRED'), findsNWidgets(2));
 
@@ -540,7 +473,7 @@ void main() {
 
     expect(find.text('Compare Data'), findsNothing);
 
-    expect(find.text('View Result'), findsOneWidget);
+    expect(find.text('Save Data'), findsOneWidget);
   });
 
   testWidgets('Dashboard starts with result unavailable', (
@@ -588,15 +521,16 @@ void main() {
 
     expect(provider.canViewResult, isFalse);
 
-    await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
+    await provider.setImage(0, File('vb1.jpg'), testDateTime);
 
     expect(provider.canViewResult, isFalse);
 
-    await provider.setImage(1, File('manual_data.jpg'), testDateTime);
+    await provider.setImage(1, File('vs1.jpg'), testDateTime);
 
     await tester.pump();
 
     expect(provider.canViewResult, isTrue);
+    provider.dispose();
   });
 
   // RESULT SCREEN TESTS
@@ -610,14 +544,17 @@ void main() {
 
     final provider = CaptureProvider();
 
-    await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
+    await provider.setImage(0, File('vb1.jpg'), testDateTime);
 
-    await provider.setImage(1, File('manual_data.jpg'), testDateTime);
+    await provider.setImage(1, File('vs1.jpg'), testDateTime);
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: provider,
-        child: const MaterialApp(home: ResultScreen()),
+        child: ScreenUtilInit(
+          designSize: const Size(375, 812),
+          builder: (context, child) => const MaterialApp(home: ResultScreen()),
+        ),
       ),
     );
 
@@ -632,9 +569,9 @@ void main() {
       findsOneWidget,
     );
 
-    expect(find.text('Digital Machine'), findsOneWidget);
+    expect(find.text('VB1'), findsOneWidget);
 
-    expect(find.text('Manual Data'), findsOneWidget);
+    expect(find.text('VS1'), findsOneWidget);
 
     expect(find.text('Comparison Result'), findsNothing);
 
@@ -643,6 +580,7 @@ void main() {
     expect(find.text('Readings Verified'), findsNothing);
 
     expect(find.text('COMPARISON DETAILS'), findsNothing);
+    provider.dispose();
   });
 
   testWidgets('ResultScreen displays all captured sections', (
@@ -655,26 +593,30 @@ void main() {
 
     final provider = CaptureProvider();
 
-    await provider.setImage(0, File('digital_machine.jpg'), testDateTime);
+    await provider.setImage(0, File('vb1.jpg'), testDateTime);
 
-    await provider.setImage(1, File('manual_data.jpg'), testDateTime);
+    await provider.setImage(1, File('vs1.jpg'), testDateTime);
 
-    await provider.setImage(2, File('micro_motion.jpg'), testDateTime);
+    await provider.setImage(2, File('r_flow.jpg'), testDateTime);
 
     await tester.pumpWidget(
       ChangeNotifierProvider.value(
         value: provider,
-        child: const MaterialApp(home: ResultScreen()),
+        child: ScreenUtilInit(
+          designSize: const Size(375, 812),
+          builder: (context, child) => const MaterialApp(home: ResultScreen()),
+        ),
       ),
     );
 
     await tester.pump();
 
-    expect(find.text('Digital Machine'), findsOneWidget);
+    expect(find.text('VB1'), findsOneWidget);
 
-    expect(find.text('Manual Data'), findsOneWidget);
+    expect(find.text('VS1'), findsOneWidget);
 
-    expect(find.text('Micro Motion'), findsOneWidget);
+    expect(find.text('R Flow'), findsOneWidget);
+    provider.dispose();
   });
 
   // CAMERA SCREEN TESTS

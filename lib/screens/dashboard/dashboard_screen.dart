@@ -20,11 +20,15 @@ import '../result_screen/result_screen.dart';
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
-  Future<void> _openCamera(BuildContext context, CngReadingType type) async {
+  Future<void> _openCamera(
+    BuildContext context,
+    CngReadingType type,
+    String title,
+  ) async {
     final CameraCaptureResult? result =
         await Navigator.push<CameraCaptureResult>(
           context,
-          MaterialPageRoute(builder: (context) => const CameraScreen()),
+          MaterialPageRoute(builder: (context) => CameraScreen(title: title)),
         );
 
     if (result != null && context.mounted) {
@@ -50,10 +54,13 @@ class DashboardScreen extends StatelessWidget {
         )
         .toList();
 
-    // Save a separate history record.
+    // 1. Save a separate history record.
     context.read<HistoryProvider>().addCapture(images: captured);
 
-    // Open ResultScreen.
+    // 2. Explicitly stop and remove the countdown timer.
+    provider.stopAndRemoveTimer();
+
+    // 3. Open ResultScreen.
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const ResultScreen()),
@@ -109,7 +116,7 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 12.h),
 
-                  if (provider.timerActive) ...[
+                  if (provider.isTimerVisible) ...[
                     Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: 12.w,
@@ -163,7 +170,7 @@ class DashboardScreen extends StatelessWidget {
                         item: item,
                         isCaptureEnabled: provider.canCapture(index),
                         onCustomCameraRequested: () =>
-                            _openCamera(context, item.type),
+                            _openCamera(context, item.type, item.title),
                       ),
                     );
                   }),

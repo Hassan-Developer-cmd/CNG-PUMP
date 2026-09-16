@@ -7,6 +7,7 @@ import '../../constants/app_constants.dart';
 import '../../models/cng_reading_item.dart';
 import '../../models/capture_history_item.dart';
 import '../../providers/capture_provider.dart';
+import '../../services/image_timestamp_service.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
 import '../../widgets/shared_widgets/custom_primary_button.dart';
 
@@ -20,85 +21,93 @@ class ResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: const CustomCurvedAppBar(
-        title: AppConstants.resultTitle,
-        showBackButton: true,
-      ),
-      body: Consumer<CaptureProvider>(
-        builder: (context, provider, child) {
-          final items = historyRecord == null
-              ? provider.readingItems.where((item) => item.hasImage).toList()
-              : historyRecord!.images
-                  .map((captured) => CngReadingItem(
-                        type: CngReadingType.digitalMachine,
-                        title: captured.label,
-                        isRequired: false,
-                        icon: Icons.image_outlined,
-                        image: captured.image,
-                                              ))
-                  .toList();
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.of(context).pop();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.scaffoldBackground,
+        appBar: const CustomCurvedAppBar(
+          title: AppConstants.resultTitle,
+          showBackButton: true,
+        ),
+        body: Consumer<CaptureProvider>(
+          builder: (context, provider, child) {
+            final items = historyRecord == null
+                ? provider.readingItems.where((item) => item.hasImage).toList()
+                : historyRecord!.images
+                    .map((captured) => CngReadingItem(
+                          type: CngReadingType.digitalMachine,
+                          title: captured.label,
+                          isRequired: false,
+                          icon: Icons.image_outlined,
+                          image: captured.image,
+                          capturedAt: captured.capturedAt,
+                        ))
+                    .toList();
 
-          return Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        AppConstants.capturedPictures,
-                        style: TextStyle(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          AppConstants.capturedPictures,
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 5.h),
-                      Text(
-                        AppConstants.resultSubtitle,
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: AppColors.textSecondary,
+                        SizedBox(height: 5.h),
+                        Text(
+                          AppConstants.resultSubtitle,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 18.h),
-                      ...items.map(
-                        (item) => Padding(
-                          padding: EdgeInsets.only(bottom: 14.h),
-                          child: _ResultImageCard(item: item),
+                        SizedBox(height: 18.h),
+                        ...items.map(
+                          (item) => Padding(
+                            padding: EdgeInsets.only(bottom: 14.h),
+                            child: _ResultImageCard(item: item),
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
                       ),
                     ],
                   ),
-                ),
-              ),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
+                  child: SafeArea(
+                    top: false,
+                    child: CustomPrimaryButton(
+                      text: AppConstants.done,
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                  ],
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: CustomPrimaryButton(
-                    text: AppConstants.done,
-                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -157,6 +166,37 @@ class _ResultImageCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (item.capturedAt != null)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryTeal.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6.r),
+                    border: Border.all(
+                      color: AppColors.primaryTeal.withValues(alpha: 0.3),
+                      width: 0.7,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time_outlined,
+                        color: AppColors.primaryTeal,
+                        size: 10.sp,
+                      ),
+                      SizedBox(width: 3.w),
+                      Text(
+                        ImageTimestampService.formatTimestamp(item.capturedAt!),
+                        style: TextStyle(
+                          color: AppColors.primaryTeal,
+                          fontSize: 8.5.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
           SizedBox(height: 10.h),
