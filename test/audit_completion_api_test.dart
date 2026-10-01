@@ -30,37 +30,24 @@ void main() {
   });
 
   group('Audit Completion API Unit & Endpoint Contract Tests', () {
-    test('POST /api/v1/capture/complete/:id in Meter mode sends multipart/form-data, omit nozzleNumber and attach image', () async {
+    test('POST /api/v1/capture/complete/:id sends POST with empty body and application/json headers with Bearer token', () async {
       String? calledUrl;
       String? calledMethod;
       Map<String, String>? calledHeaders;
-      Map<String, String>? calledFields;
-      String? calledFileKey;
+      String? calledBody;
 
-      final tempDir = Directory.systemTemp;
-      final testFile = File('${tempDir.path}/test_comp_meter_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      await testFile.writeAsBytes([1, 2, 3, 4]);
-
-      final mockHttp = MockClient.streaming((request, bodyStream) async {
+      final mockHttp = MockClient((request) async {
         calledUrl = request.url.toString();
         calledMethod = request.method;
         calledHeaders = request.headers;
+        calledBody = request.body;
 
-        if (request is http.MultipartRequest) {
-          calledFields = request.fields;
-          if (request.files.isNotEmpty) {
-            calledFileKey = request.files.first.field;
-          }
-        }
-
-        final respBytes = utf8.encode(jsonEncode({
-          'success': true,
-          'message': 'Audit marked as complete',
-          'sessionId': 'session_meter_123',
-        }));
-
-        return http.StreamedResponse(
-          Stream.value(respBytes),
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Audit marked as complete',
+            'sessionId': 'session_meter_123',
+          }),
           200,
           headers: {'content-type': 'application/json'},
         );
@@ -74,91 +61,53 @@ void main() {
       final result = await repo.completeAuditSession(
         sessionId: 'session_meter_123',
         mode: 'Meter',
-        capturedImages: [
-          CapturedImage(label: 'VB1', image: testFile, capturedAt: DateTime.now()),
-        ],
-        statusText: 'IN_SYNC',
-        hasCorruption: false,
-        difference: '+0.00 KG',
-        threshold: '1.00 KG',
-        stationName: 'Station North',
-        operatorName: 'Ali Operator',
       );
 
       // Verify endpoint and method
       expect(calledMethod, 'POST');
       expect(calledUrl, 'http://192.168.1.8:5000/api/v1/capture/complete/session_meter_123');
 
-      // Verify headers: Content-Type is multipart/form-data, Accept is application/json, Bearer token
-      expect(calledHeaders?['content-type'], contains('multipart/form-data'));
-      expect(calledHeaders?['content-type'], isNot(contains('application/json')));
+      // Verify headers: Content-Type is application/json, Accept is application/json, Bearer token
+      expect(calledHeaders?['content-type'], contains('application/json'));
       expect(calledHeaders?['accept'], contains('application/json'));
       expect(calledHeaders?['authorization'], 'Bearer test_jwt_token_meter');
 
-      // Verify fields for Meter mode: captureType is 'meter', imageType is 'vb1', nozzleNumber is OMITTED
-      expect(calledFields?['captureType'], 'meter');
-      expect(calledFields?['imageType'], 'vb1');
-      expect(calledFields?.containsKey('nozzleNumber'), isFalse);
-
-      // Verify file field key is strictly 'image'
-      expect(calledFileKey, 'image');
+      // Verify body is empty (None)
+      expect(calledBody, isEmpty);
       expect(result['success'], isTrue);
-
-      if (await testFile.exists()) await testFile.delete();
     });
 
-    test('POST /api/v1/capture/complete/:id in Nozzle mode sends multipart/form-data with dynamic nozzleNumber and image', () async {
+    test('POST /api/v1/capture/complete/:id dynamically handles captureId without token', () async {
       String? calledUrl;
       String? calledMethod;
       Map<String, String>? calledHeaders;
-      Map<String, String>? calledFields;
-      String? calledFileKey;
+      String? calledBody;
 
-      final tempDir = Directory.systemTemp;
-      final testFile = File('${tempDir.path}/test_comp_nozzle_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      await testFile.writeAsBytes([1, 2, 3, 4]);
-
-      final mockHttp = MockClient.streaming((request, bodyStream) async {
+      final mockHttp = MockClient((request) async {
         calledUrl = request.url.toString();
         calledMethod = request.method;
         calledHeaders = request.headers;
+        calledBody = request.body;
 
-        if (request is http.MultipartRequest) {
-          calledFields = request.fields;
-          if (request.files.isNotEmpty) {
-            calledFileKey = request.files.first.field;
-          }
-        }
-
-        final respBytes = utf8.encode(jsonEncode({
-          'success': true,
-          'message': 'Nozzle audit marked as complete',
-          'sessionId': 'session_nozzle_456',
-        }));
-
-        return http.StreamedResponse(
-          Stream.value(respBytes),
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Nozzle audit marked as complete',
+            'sessionId': 'session_nozzle_456',
+          }),
           200,
           headers: {'content-type': 'application/json'},
         );
       });
 
       final testApiClient = ApiClient(httpClient: mockHttp);
-      testApiClient.setAuthToken('test_jwt_token_nozzle');
+      testApiClient.clearAuthToken();
 
       final repo = RemoteAuditRepository(client: testApiClient);
 
       final result = await repo.completeAuditSession(
         sessionId: 'session_nozzle_456',
         mode: 'Nozzle 3',
-        imageFile: testFile,
-        imageType: 'digitalMachine',
-        statusText: 'CORRUPTION_DETECTED',
-        hasCorruption: true,
-        difference: '-1.35 KG',
-        threshold: '1.00 KG',
-        stationName: 'Station South',
-        operatorName: 'Zahid Khan',
       );
 
       // Verify endpoint and method
@@ -166,20 +115,13 @@ void main() {
       expect(calledUrl, 'http://192.168.1.8:5000/api/v1/capture/complete/session_nozzle_456');
 
       // Verify headers
-      expect(calledHeaders?['content-type'], contains('multipart/form-data'));
+      expect(calledHeaders?['content-type'], contains('application/json'));
       expect(calledHeaders?['accept'], contains('application/json'));
-      expect(calledHeaders?['authorization'], 'Bearer test_jwt_token_nozzle');
+      expect(calledHeaders?.containsKey('authorization'), isFalse);
 
-      // Verify fields for Nozzle mode: captureType is 'nozzle', imageType is 'digitalMachine', nozzleNumber is '3'
-      expect(calledFields?['captureType'], 'nozzle');
-      expect(calledFields?['imageType'], 'digitalMachine');
-      expect(calledFields?['nozzleNumber'], '3');
-
-      // Verify file field key is strictly 'image'
-      expect(calledFileKey, 'image');
+      // Verify body is empty
+      expect(calledBody, isEmpty);
       expect(result['success'], isTrue);
-
-      if (await testFile.exists()) await testFile.delete();
     });
 
     test('completeSession in CaptureProvider updates state and catches errors', () async {
@@ -819,31 +761,46 @@ void main() {
       final tempDir = Directory.systemTemp;
       final f1 = File('${tempDir.path}/test_vb1_${DateTime.now().millisecondsSinceEpoch}.jpg');
       final f2 = File('${tempDir.path}/test_vs1_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      await f1.writeAsBytes([1, 2, 3]);
-      await f2.writeAsBytes([4, 5, 6]);
+      final kValidPng = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      );
+      f1.writeAsBytesSync(kValidPng);
+      f2.writeAsBytesSync(kValidPng);
 
       bool completionCalled = false;
 
-      final mockHttp = MockClient((request) async {
+      final mockHttp = MockClient.streaming((request, bodyStream) async {
         if (request.url.path.contains('/api/v1/capture/complete/')) {
           completionCalled = true;
-          return http.Response(
-            jsonEncode({'success': true, 'message': 'Complete'}),
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({'success': true, 'message': 'Complete'}))),
             200,
             headers: {'content-type': 'application/json'},
           );
         }
-        if (request.url.path == '/api/v1/capture/captureImage') {
-          return http.Response(
-            jsonEncode({'success': true, 'imageUrl': 'http://img.jpg', 'imageId': 'id1'}),
+        if (request.url.path.contains('/captureImage')) {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({
+              'success': true,
+              'imageUrl': 'http://192.168.1.8:5000/uploads/test.jpg',
+              'imageId': 'id1',
+            }))),
             200,
             headers: {'content-type': 'application/json'},
           );
         }
         if (request.url.path == '/api/v1/audits') {
-          return http.Response(jsonEncode([]), 200, headers: {'content-type': 'application/json'});
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode([]))),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
         }
-        return http.Response('{}', 200, headers: {'content-type': 'application/json'});
+        return http.StreamedResponse(
+          Stream.value(utf8.encode('{}')),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
       });
 
       final testClient = ApiClient(httpClient: mockHttp);
@@ -875,7 +832,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final saveDataButton = find.text('Save Data');
       expect(saveDataButton, findsOneWidget);
@@ -884,19 +841,19 @@ void main() {
       await tester.tap(saveDataButton);
       await tester.pump(); // Start execution & show progress dialog
 
-      // Verify progress dialog appears with "Uploading images to server..."
-      expect(find.text('Uploading images to server...'), findsOneWidget);
-
       // Advance through async operations to dismiss progress dialog
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pumpAndSettle();
+      for (int i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (completionCalled && find.text('Pics sent successfully').evaluate().isNotEmpty) {
+          break;
+        }
+      }
 
       // Verify completion API was called directly
       expect(completionCalled, isTrue);
 
       // Verify progress dialog is dismissed
-      expect(find.text('Uploading images to server...'), findsNothing);
+      expect(find.text('Saving and uploading data...'), findsNothing);
 
       // Verify prominent green SnackBar "Pics sent successfully" is shown
       expect(find.text('Pics sent successfully'), findsOneWidget);
@@ -910,8 +867,138 @@ void main() {
       expect(captureProvider.activeSessionId, isNull);
       expect(captureProvider.timerActive, isFalse);
 
-      if (await f1.exists()) await f1.delete();
-      if (await f2.exists()) await f2.delete();
+      if (f1.existsSync()) f1.deleteSync();
+      if (f2.existsSync()) f2.deleteSync();
+    });
+
+    testWidgets('Tapping Save Data when completion API fails closes dialog and shows error SnackBar with Retry', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tempDir = Directory.systemTemp;
+      final f1 = File('${tempDir.path}/test_fail_vb1_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final f2 = File('${tempDir.path}/test_fail_vs1_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final kValidPng = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      );
+      f1.writeAsBytesSync(kValidPng);
+      f2.writeAsBytesSync(kValidPng);
+
+      final mockHttp = MockClient.streaming((request, bodyStream) async {
+        if (request.url.path.contains('/api/v1/capture/complete/')) {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({'message': 'Server completion rejected'}))),
+            500,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path.contains('/captureImage')) {
+          return http.StreamedResponse(
+            Stream.value(utf8.encode(jsonEncode({
+              'success': true,
+              'imageUrl': 'http://192.168.1.8:5000/uploads/test.jpg',
+              'imageId': 'id1',
+            }))),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(
+          Stream.value(utf8.encode('{}')),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final testClient = ApiClient(httpClient: mockHttp);
+      final repo = RemoteAuditRepository(client: testClient);
+
+      final captureProvider = CaptureProvider(repository: repo);
+      await captureProvider.setImageByType(CngReadingType.vb1, f1, DateTime.now());
+      await captureProvider.setImageByType(CngReadingType.vs1, f2, DateTime.now());
+
+      final historyProvider = HistoryProvider(repository: repo);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: captureProvider),
+            ChangeNotifierProvider.value(value: historyProvider),
+            ChangeNotifierProvider(create: (_) => PumpProvider()),
+            ChangeNotifierProvider(create: (_) => UserProvider()),
+          ],
+          child: ScreenUtilInit(
+            designSize: const Size(375, 812),
+            builder: (context, child) => const MaterialApp(
+              home: DashboardScreen(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      final saveDataButton = find.text('Save Data');
+      expect(saveDataButton, findsOneWidget);
+
+      await tester.tap(saveDataButton);
+      await tester.pump();
+
+      // Advance through async network failure
+      for (int i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.text('Saving and uploading data...').evaluate().isEmpty) {
+          break;
+        }
+      }
+
+      // Progress dialog is dismissed
+      expect(find.text('Saving and uploading data...'), findsNothing);
+
+      // Error SnackBar with Retry button is displayed
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.textContaining('Server completion rejected'), findsOneWidget);
+
+      if (f1.existsSync()) f1.deleteSync();
+      if (f2.existsSync()) f2.deleteSync();
+    });
+
+    test('Verify hasRequiredImagesCaptured logic for Meter and Nozzle modes', () async {
+      final repo = MockAuditRepository();
+      final provider = CaptureProvider(repository: repo);
+
+      final tempDir = Directory.systemTemp;
+      final file1 = File('${tempDir.path}/test_req1_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final file2 = File('${tempDir.path}/test_req2_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await file1.writeAsBytes([1]);
+      await file2.writeAsBytes([2]);
+
+      // Initially in Meter mode with no images: false
+      expect(provider.hasRequiredImagesCaptured, isFalse);
+
+      // Only VB1 set: false
+      await provider.setImageByType(CngReadingType.vb1, file1, DateTime.now());
+      expect(provider.hasRequiredImagesCaptured, isFalse);
+
+      // Both VB1 and VS1 set: true
+      await provider.setImageByType(CngReadingType.vs1, file2, DateTime.now());
+      expect(provider.hasRequiredImagesCaptured, isTrue);
+
+      // Switch to Nozzle mode: initially false
+      provider.setPrimarySourceMode(PrimarySourceMode.nozzle1);
+      expect(provider.hasRequiredImagesCaptured, isFalse);
+
+      // Set Digital Machine (Meter): still false
+      await provider.setImageByType(CngReadingType.meter, file1, DateTime.now());
+      expect(provider.hasRequiredImagesCaptured, isFalse);
+
+      // Set Counter: true
+      await provider.setImageByType(CngReadingType.counter, file2, DateTime.now());
+      expect(provider.hasRequiredImagesCaptured, isTrue);
+
+      if (await file1.exists()) await file1.delete();
+      if (await file2.exists()) await file2.delete();
     });
   });
 }

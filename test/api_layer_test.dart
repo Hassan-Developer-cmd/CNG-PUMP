@@ -410,7 +410,7 @@ class _TestAuditRepository implements AuditRepository {
   @override
   Future<Map<String, dynamic>> completeAuditSession({
     required String sessionId,
-    required String mode,
+    String? mode,
     List<CapturedImage>? capturedImages,
     File? imageFile,
     String? imageType,

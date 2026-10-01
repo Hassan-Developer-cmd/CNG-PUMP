@@ -20,6 +20,7 @@ import '../../widgets/dashboard/reading_picture_box.dart';
 import '../../widgets/dashboard/user_profile_header.dart';
 import '../auth/login_screen.dart';
 import '../camera_screen/camera_screen.dart';
+import '../../services/api/api_exception.dart';
 
 String dropdowntext = "Dummy";
 
@@ -128,6 +129,26 @@ class DashboardScreen extends StatelessWidget {
     final captureProvider = context.read<CaptureProvider>();
     final historyProvider = context.read<HistoryProvider>();
 
+    // Step A: Verify all required images for the current mode are captured locally
+    // (vb1 + vs1 for Meter, or digitalMachine + counter for Nozzle).
+    final isMeterMode = captureProvider.primarySourceMode == PrimarySourceMode.meter;
+    if (!captureProvider.hasRequiredImagesCaptured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFDC2626),
+          duration: const Duration(seconds: 4),
+          content: Text(
+            isMeterMode
+                ? 'Please capture all required images (VB1 and VS1) before saving.'
+                : 'Please capture all required images (Digital Machine and Counter) before saving.',
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      return;
+    }
+
     String stationName = captureProvider.stationName;
     try {
       final pumpProvider = context.read<PumpProvider>();
@@ -147,7 +168,7 @@ class DashboardScreen extends StatelessWidget {
     // 1. Stop and remove countdown timer
     captureProvider.stopAndRemoveTimer();
 
-    // 2. Show immediate loading indicator / progress dialog ("Uploading images to server...")
+    // Step B: Show a blocking loading dialog or spinner ("Saving and uploading data...")
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -169,7 +190,7 @@ class DashboardScreen extends StatelessWidget {
                 SizedBox(width: 20.w),
                 Expanded(
                   child: Text(
-                    'Uploading images to server...',
+                    'Saving and uploading data...',
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
@@ -187,48 +208,71 @@ class DashboardScreen extends StatelessWidget {
     bool isProgressOpen = true;
     void closeProgress() {
       if (isProgressOpen && context.mounted) {
-        final nav = Navigator.of(context, rootNavigator: true);
-        if (nav.canPop()) {
-          isProgressOpen = false;
-          nav.pop();
-        }
+        isProgressOpen = false;
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
       }
     }
 
     try {
-      // 3. Batch-upload any pending captured images to ensure all parts are uploaded
+      // Step C: Ensure individual images are uploaded first via /captureImage
       await captureProvider.batchUploadAll();
 
-      // 4. Create active session record
+      if (captureProvider.hasCardUploadErrors) {
+        closeProgress();
+        if (!context.mounted) return;
+        final uploadError = captureProvider.firstCardUploadError ??
+            'Image upload failed. Tap Retry to try again.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFFDC2626),
+            duration: const Duration(seconds: 6),
+            content: Text(
+              uploadError,
+              style: const TextStyle(color: Colors.white),
+            ),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _handleSaveData(context),
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Create active session record
       final newSession = captureProvider.createSessionRecord(
         stationName: stationName,
         operatorName: operatorName,
       );
 
-      // 5. Directly trigger the audit upload / completion API call (/api/v1/capture/complete/:id)
+      final currentCaptureId = captureProvider.activeCaptureId ?? newSession.id;
+
+      // Directly trigger the complete endpoint:
+      // POST http://192.168.1.8:5000/api/v1/capture/complete/$currentCaptureId
       final success = await captureProvider.completeSession(
-        sessionId: newSession.id,
-        difference: '0.00 KG',
-        threshold: '1 KG',
-        hasCorruption: false,
-        statusText: 'IN_SYNC',
+        sessionId: currentCaptureId,
       );
 
       closeProgress();
 
       if (success) {
-        // Record session to history and refresh
+        // Post-Success Actions:
+        // Clear the active capture state in CaptureProvider
+        captureProvider.clearAll();
+
+        // Refresh HistoryProvider dynamically so the new record appears in history
         historyProvider.addSession(newSession);
         try {
           await historyProvider.fetchHistory();
         } catch (_) {}
 
-        // Clear active session state in CaptureProvider
-        captureProvider.clearAll();
-
         if (!context.mounted) return;
 
-        // Show prominent green SnackBar: "Pics sent successfully"
+        // Show SnackBar/Toast: "Pics sent successfully"
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
@@ -253,12 +297,12 @@ class DashboardScreen extends StatelessWidget {
           ),
         );
 
-        // Navigate directly back to Home/Dashboard screen
+        // Navigate straight back to the Home/Dashboard screen (do not open any Comparison or Done screen)
         Navigator.of(context).popUntil((route) => route.isFirst);
       } else {
         if (!context.mounted) return;
         final errorMsg = captureProvider.completionError ??
-            'Failed to upload images. Tap Retry to try again.';
+            'Failed to save and upload data. Tap Retry to try again.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
@@ -279,13 +323,18 @@ class DashboardScreen extends StatelessWidget {
     } catch (e) {
       closeProgress();
       if (context.mounted) {
+        final errorMsg = e is ApiException
+            ? e.message
+            : (e.toString().startsWith('Exception: ')
+                ? e.toString().substring(11)
+                : e.toString());
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
             backgroundColor: const Color(0xFFDC2626),
             duration: const Duration(seconds: 6),
             content: Text(
-              'Upload error: $e',
+              'Upload error: $errorMsg',
               style: const TextStyle(color: Colors.white),
             ),
             action: SnackBarAction(

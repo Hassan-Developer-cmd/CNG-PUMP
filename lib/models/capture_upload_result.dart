@@ -14,6 +14,9 @@ class CaptureUploadResult {
   /// The MongoDB document `_id` for this upload record.
   final String? imageId;
 
+  /// The active session or capture ID returned from the server upload.
+  final String? captureId;
+
   /// Optional server-side message returned in the response body.
   final String? message;
 
@@ -21,6 +24,7 @@ class CaptureUploadResult {
     required this.success,
     this.imageUrl,
     this.imageId,
+    this.captureId,
     this.message,
   });
 
@@ -49,6 +53,22 @@ class CaptureUploadResult {
         captureMap?['id'] as String? ??
         captureMap?['_id'] as String?;
 
+    final captureId = data['captureId'] as String? ??
+        data['capture_id'] as String? ??
+        data['sessionId'] as String? ??
+        data['session_id'] as String? ??
+        json['captureId'] as String? ??
+        json['capture_id'] as String? ??
+        data['auditId'] as String? ??
+        data['audit_id'] as String? ??
+        captureMap?['id'] as String? ??
+        captureMap?['_id'] as String? ??
+        captureMap?['captureId'] as String? ??
+        data['_id'] as String? ??
+        data['id'] as String? ??
+        json['_id'] as String? ??
+        json['id'] as String?;
+
     final successFromJson = json['success'] as bool? ??
         json['ok'] as bool? ??
         (json['status'] == 'success') ||
@@ -64,6 +84,7 @@ class CaptureUploadResult {
       success: success,
       imageUrl: imageUrl,
       imageId: imageId,
+      captureId: captureId,
       message: json['message'] as String? ?? data['message'] as String?,
     );
   }
@@ -72,6 +93,7 @@ class CaptureUploadResult {
         'success': success,
         if (imageUrl != null) 'imageUrl': imageUrl,
         if (imageId != null) 'imageId': imageId,
+        if (captureId != null) 'captureId': captureId,
         if (message != null) 'message': message,
       };
 

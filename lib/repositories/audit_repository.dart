@@ -92,7 +92,7 @@ abstract class AuditRepository {
   /// [hasCorruption] — whether a discrepancy was flagged.
   Future<Map<String, dynamic>> completeAuditSession({
     required String sessionId,
-    required String mode,
+    String? mode,
     List<CapturedImage>? capturedImages,
     File? imageFile,
     String? imageType,
@@ -113,6 +113,8 @@ class RemoteAuditRepository implements AuditRepository {
 
   RemoteAuditRepository({ApiClient? client, String? baseUrl})
       : _client = client ?? ApiClient.instance;
+
+  ApiClient get client => _client;
 
   @override
   AuditConfigModel get initialAuditConfig => const AuditConfigModel();
@@ -323,7 +325,7 @@ class RemoteAuditRepository implements AuditRepository {
   @override
   Future<Map<String, dynamic>> completeAuditSession({
     required String sessionId,
-    required String mode,
+    String? mode,
     List<CapturedImage>? capturedImages,
     File? imageFile,
     String? imageType,
@@ -346,80 +348,13 @@ class RemoteAuditRepository implements AuditRepository {
       } catch (_) {}
     }
 
-    final cleanMode = mode.toLowerCase();
-    final isNozzle = cleanMode.contains('nozzle');
-    final captureType = isNozzle ? 'nozzle' : 'meter';
-    String? nozzleNumber;
-    if (isNozzle) {
-      final match = RegExp(r'\d+').firstMatch(mode);
-      nozzleNumber = match != null ? match.group(0) : '1';
+    // 2. Trigger POST to /api/v1/capture/complete/$captureId with empty body and JSON headers
+    final endpoint = ApiEndpoints.captureComplete(sessionId.trim());
+    final response = await _client.post(endpoint);
+    if (response is Map<String, dynamic>) {
+      return response;
     }
-
-    // Determine the images to submit via multipart
-    final List<MapEntry<String, File?>> imageEntries = [];
-
-    if (imageFile != null) {
-      final mappedType = imageType ?? getBackendImageType('image', mode);
-      imageEntries.add(MapEntry(mappedType, imageFile));
-    } else if (capturedImages != null && capturedImages.isNotEmpty) {
-      for (final img in capturedImages) {
-        final mappedType = getBackendImageType(img.label, mode);
-        imageEntries.add(MapEntry(mappedType, img.image.path.isNotEmpty ? img.image : null));
-      }
-    }
-
-    // Helper to send a single multipart completion request
-    Future<Map<String, dynamic>> sendOneMultipart({
-      required String mappedType,
-      File? file,
-    }) async {
-      // Configure multipart fields strictly based on active mode:
-      // A. Mode: Meter -> captureType: "meter", imageType: "vb1"|"vs1"|"rflow", nozzleNumber omitted
-      // B. Mode: Nozzle -> captureType: "nozzle", imageType: "digitalMachine"|"counter"|"microMotion", nozzleNumber: "1".."4"
-      final fields = <String, String>{
-        'captureType': captureType,
-        'imageType': mappedType,
-        if (isNozzle && nozzleNumber != null) 'nozzleNumber': nozzleNumber,
-        if (statusText != null && statusText.isNotEmpty) 'status': statusText,
-        if (difference != null && difference.isNotEmpty) 'difference': difference,
-        if (threshold != null && threshold.isNotEmpty) 'threshold': threshold,
-        if (stationName != null && stationName.isNotEmpty) 'stationName': stationName,
-        if (operatorName != null && operatorName.isNotEmpty) 'operatorName': operatorName,
-      };
-
-      // Add files with field key strictly "image"
-      final filesMap = <String, File>{};
-      if (file != null && file.path.isNotEmpty && await file.exists()) {
-        filesMap['image'] = file;
-      }
-
-      final response = await _client.multipartPost(
-        ApiEndpoints.captureComplete(sessionId),
-        fields: fields,
-        files: filesMap.isNotEmpty ? filesMap : null,
-      );
-
-      if (response is Map<String, dynamic>) {
-        return response;
-      }
-      return {'success': true};
-    }
-
-    // Multi-Image Submission Workflow:
-    // If multiple captured images exist, iterate through them and send requests accordingly, or send the final completion image.
-    if (imageEntries.isNotEmpty) {
-      Map<String, dynamic> lastResponse = {'success': true};
-      for (final entry in imageEntries) {
-        lastResponse = await sendOneMultipart(
-          mappedType: entry.key,
-          file: entry.value,
-        );
-      }
-      return lastResponse;
-    } else {
-      final defaultType = isNozzle ? 'digitalMachine' : 'vb1';
-      return await sendOneMultipart(mappedType: defaultType, file: null);
-    }
+    return {'success': true, 'data': response};
   }
 }
 
@@ -494,7 +429,7 @@ class MockAuditRepository implements AuditRepository {
   @override
   Future<Map<String, dynamic>> completeAuditSession({
     required String sessionId,
-    required String mode,
+    String? mode,
     List<CapturedImage>? capturedImages,
     File? imageFile,
     String? imageType,

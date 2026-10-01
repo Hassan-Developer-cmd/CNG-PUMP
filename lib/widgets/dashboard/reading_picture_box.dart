@@ -62,25 +62,30 @@ class ReadingPictureBox extends StatelessWidget {
   }
 
   Widget _buildEmptyContent() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.camera_alt_outlined,
-          size: 26.sp,
-          color: const Color(0xFF1E293B),
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.camera_alt_outlined,
+              size: 26.sp,
+              color: const Color(0xFF1E293B),
+            ),
+            SizedBox(height: 5.h),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11.sp,
+                color: const Color(0xFF1E293B),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
-        SizedBox(height: 5.h),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 11.sp,
-            color: const Color(0xFF1E293B),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+      ),
     );
   }
 

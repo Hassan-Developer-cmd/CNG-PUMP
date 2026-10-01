@@ -67,17 +67,27 @@ class CaptureProvider extends ChangeNotifier {
   String? get submissionError => _submissionError;
 
   // -------------------------------------------------------
-  // Active session ID — set when createSessionRecord() is called
+  // Active session / capture ID — set when upload or createSessionRecord() is called
   // -------------------------------------------------------
   String? _activeSessionId;
+  String? _activeCaptureId;
 
   /// The ID of the most recently created session record.
   /// Used as the `:id` parameter for POST /api/v1/capture/complete/:id.
   String? get activeSessionId => _activeSessionId;
 
+  /// Returns the server-assigned or session-assigned capture ID for completion.
+  String? get activeCaptureId => _activeCaptureId ?? _activeSessionId;
+
   /// Sets or overrides the active session ID (e.g. from server upload or station session).
   void setActiveSessionId(String id) {
     _activeSessionId = id.trim();
+    notifyListeners();
+  }
+
+  /// Sets or overrides the active capture ID from server response.
+  void setActiveCaptureId(String id) {
+    _activeCaptureId = id.trim();
     notifyListeners();
   }
 
@@ -121,6 +131,41 @@ class CaptureProvider extends ChangeNotifier {
   bool isCardVerified(CngReadingType type) =>
       _cardUploadedImageUrl[type.value] != null ||
       _cardUploadedImageId[type.value] != null;
+
+  /// Returns true if any card upload encountered an error.
+  bool get hasCardUploadErrors =>
+      _cardUploadError.values.any((e) => e != null && e.isNotEmpty);
+
+  /// Returns the first card upload error message encountered, if any.
+  String? get firstCardUploadError {
+    for (final err in _cardUploadError.values) {
+      if (err != null && err.isNotEmpty) return err;
+    }
+    return null;
+  }
+
+  /// Returns true when all required images for the current mode are captured locally on device:
+  /// - Mode: Meter -> requires VB1 and VS1 images.
+  /// - Mode: Nozzle -> requires Digital Machine (or Meter card) and Counter images.
+  bool get hasRequiredImagesCaptured {
+    if (_primarySourceMode == PrimarySourceMode.meter) {
+      final vb1 = getItemByType(CngReadingType.vb1);
+      final vs1 = getItemByType(CngReadingType.vs1);
+      final hasVb1 = (vb1.hasImage && vb1.image != null) ||
+          (_primaryCardImage != null);
+      final hasVs1 = vs1.hasImage && vs1.image != null;
+      return hasVb1 && hasVs1;
+    } else {
+      final meterItem = getItemByType(CngReadingType.meter);
+      final counterItem = getItemByType(CngReadingType.counter);
+      final hasDigital = (_primaryCardImage != null) ||
+          (meterItem.hasImage && meterItem.image != null) ||
+          (_meterImage != null);
+      final hasCounter = (_counterImage != null) ||
+          (counterItem.hasImage && counterItem.image != null);
+      return hasDigital && hasCounter;
+    }
+  }
 
   CaptureProvider({AuditRepository? repository})
       : _repository = repository ?? _resolveRepository() {
@@ -306,7 +351,7 @@ class CaptureProvider extends ChangeNotifier {
   }) async {
     final sid = (sessionId != null && sessionId.trim().isNotEmpty)
         ? sessionId.trim()
-        : (_activeSessionId ?? 'aud_${DateTime.now().millisecondsSinceEpoch}');
+        : (activeCaptureId ?? 'aud_${DateTime.now().millisecondsSinceEpoch}');
 
     _isCompleting = true;
     _completionError = null;
@@ -442,6 +487,9 @@ class CaptureProvider extends ChangeNotifier {
       );
       _cardUploading[key] = false;
       if (result.success) {
+        if (result.captureId != null && result.captureId!.isNotEmpty) {
+          _activeCaptureId = result.captureId;
+        }
         _cardUploadedImageUrl[key] = result.imageUrl ??
             'uploaded_${DateTime.now().millisecondsSinceEpoch}';
         _cardUploadedImageId[key] = result.imageId ??
@@ -501,6 +549,9 @@ class CaptureProvider extends ChangeNotifier {
           );
           _cardUploading[key] = false;
           if (r.success) {
+            if (r.captureId != null && r.captureId!.isNotEmpty) {
+              _activeCaptureId = r.captureId;
+            }
             _cardUploadedImageUrl[key] = r.imageUrl ??
                 'uploaded_${DateTime.now().millisecondsSinceEpoch}';
             _cardUploadedImageId[key] = r.imageId ??
@@ -904,6 +955,7 @@ class CaptureProvider extends ChangeNotifier {
     _cardUploadedImageId.clear();
 
     _activeSessionId = null;
+    _activeCaptureId = null;
     _isCompleting = false;
     _completionError = null;
 

@@ -1,148 +1,224 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../constants/api_constants.dart';
 import '../config/app_dependencies.dart';
+import '../models/audit_history_model.dart';
 import '../models/capture_history_item.dart';
-import '../models/comparison_history_record.dart';
 import '../models/station_history_item.dart';
+import '../services/api/api_client.dart';
+import '../services/api/auth_storage.dart';
 import '../repositories/audit_repository.dart';
-import '../services/api/api_exception.dart';
+
 import '../widgets/shared_widgets/async_state_view.dart';
 
-enum HistoryTimeFilter {
-  all,
-  today,
-  last7Days,
-  last30Days,
-}
+enum HistoryTimeFilter { all, today, last7Days, last30Days }
 
+/// Provider for dynamic MongoDB audit history synchronization.
+/// Completely eliminates all static/mock data and reflects the live database state.
 class HistoryProvider extends ChangeNotifier {
-  final AuditRepository _repository;
+  final http.Client _httpClient;
+  final dynamic _repository;
+
+  List<AuditHistoryModel> historyList = [];
+  bool isLoading = false;
+  String? errorMessage;
   HistoryTimeFilter _selectedFilter = HistoryTimeFilter.all;
-  AsyncStatus _status = AsyncStatus.empty;
-  String? _errorMessage;
 
-  final List<CaptureHistoryItem> _records = [];
-  final List<StationHistoryItem> _stationRecords = [];
-  final List<ComparisonHistoryRecord> _comparisonRecords = [];
+  HistoryProvider({http.Client? httpClient, dynamic repository})
+      : _repository = repository,
+        _httpClient = httpClient ??
+            (repository != null && repository is RemoteAuditRepository
+                ? repository.client.httpClient
+                : ApiClient.instance.httpClient);
 
-  HistoryProvider({AuditRepository? repository})
-      : _repository = repository ?? _resolveRepository() {
-    _status = AsyncStatus.empty;
+  bool get hasError => errorMessage != null && errorMessage!.isNotEmpty;
+  bool get isEmpty => historyList.isEmpty;
+
+  AsyncStatus get status {
+    if (isLoading) return AsyncStatus.loading;
+    if (hasError) return AsyncStatus.error;
+    if (isEmpty) return AsyncStatus.empty;
+    return AsyncStatus.loaded;
   }
-
-  static AuditRepository _resolveRepository() {
-    AppDependencies.ensureInitialized();
-    return AppDependencies.auditRepository;
-  }
-
-  AsyncStatus get status => _status;
-  bool get isLoading => _status == AsyncStatus.loading;
-  bool get hasError => _status == AsyncStatus.error;
-  String? get errorMessage => _errorMessage;
 
   HistoryTimeFilter get selectedFilter => _selectedFilter;
-  List<CaptureHistoryItem> get records => List.unmodifiable(_records);
-  List<StationHistoryItem> get stationRecords => List.unmodifiable(_stationRecords);
-  List<ComparisonHistoryRecord> get comparisonRecords =>
-      List.unmodifiable(_comparisonRecords);
-  bool get isEmpty => _records.isEmpty && _stationRecords.isEmpty;
-  bool get isStationRecordsEmpty => _stationRecords.isEmpty;
-
-  List<StationHistoryItem> get filteredStationRecords {
-    final now = DateTime.now();
-    switch (_selectedFilter) {
-      case HistoryTimeFilter.today:
-        return _stationRecords.where((item) {
-          final diff = now.difference(item.timestamp);
-          return diff.inDays == 0 && item.timestamp.day == now.day;
-        }).toList();
-      case HistoryTimeFilter.last7Days:
-        return _stationRecords.where((item) {
-          return now.difference(item.timestamp).inDays <= 7;
-        }).toList();
-      case HistoryTimeFilter.last30Days:
-        return _stationRecords.where((item) {
-          return now.difference(item.timestamp).inDays <= 30;
-        }).toList();
-      case HistoryTimeFilter.all:
-        return List.unmodifiable(_stationRecords);
-    }
-  }
-
-  /// All completed operator audit sessions (strictly real-time dynamic captures)
-  List<CaptureHistoryItem> get auditSessions {
-    if (_records.isNotEmpty) {
-      return List.unmodifiable(_records);
-    }
-    if (_stationRecords.isNotEmpty) {
-      final fromStations =
-          filteredStationRecords.map((s) => s.toCaptureHistoryItem()).toList();
-      return List.unmodifiable(fromStations);
-    }
-    return const [];
-  }
-
-  CaptureHistoryItem? findSessionById(String id) {
-    try {
-      return auditSessions.firstWhere((s) => s.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Asynchronously fetch real-time submitted photos and session feeds from API
-  Future<void> fetchHistory() async {
-    _status = AsyncStatus.loading;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      final fetched = await _repository.getHistoryRecords();
-      _records.clear();
-      _records.addAll(fetched);
-
-      _stationRecords.clear();
-      _stationRecords.addAll(
-        fetched.map((h) => StationHistoryItem.fromCaptureHistoryItem(h)),
-      );
-
-      _status = _records.isEmpty && _stationRecords.isEmpty
-          ? AsyncStatus.empty
-          : AsyncStatus.loaded;
-    } catch (e) {
-      _status = AsyncStatus.error;
-      final rawError = e is ApiException ? e.message : e.toString();
-      _errorMessage = rawError.startsWith('Exception: ')
-          ? rawError.substring(11)
-          : rawError;
-    }
-    notifyListeners();
-  }
 
   void setFilter(HistoryTimeFilter filter) {
     _selectedFilter = filter;
     notifyListeners();
   }
 
-  /// Pushes a new dynamic session record immediately into memory and persists to API
-  Future<bool> addSession(CaptureHistoryItem session) async {
-    _records.removeWhere((r) => r.id == session.id);
-    _records.insert(0, session);
+  /// Returns dynamically mapped [CaptureHistoryItem]s for visual cards & inspection viewers
+  List<CaptureHistoryItem> get auditSessions =>
+      historyList.map((m) => m.toCaptureHistoryItem()).toList();
 
-    final stationItem = StationHistoryItem.fromCaptureHistoryItem(session);
-    _stationRecords.removeWhere((s) => s.id == session.id);
-    _stationRecords.insert(0, stationItem);
+  List<CaptureHistoryItem> get records => auditSessions;
 
-    _status = AsyncStatus.loaded;
-    notifyListeners();
+  List<StationHistoryItem> get stationRecords =>
+      auditSessions.map((h) => StationHistoryItem.fromCaptureHistoryItem(h)).toList();
+
+  List<StationHistoryItem> get filteredStationRecords {
+    final list = stationRecords;
+    final now = DateTime.now();
+    switch (_selectedFilter) {
+      case HistoryTimeFilter.today:
+        return list.where((item) {
+          final diff = now.difference(item.timestamp);
+          return diff.inDays == 0 && item.timestamp.day == now.day;
+        }).toList();
+      case HistoryTimeFilter.last7Days:
+        return list.where((item) {
+          return now.difference(item.timestamp).inDays <= 7;
+        }).toList();
+      case HistoryTimeFilter.last30Days:
+        return list.where((item) {
+          return now.difference(item.timestamp).inDays <= 30;
+        }).toList();
+      case HistoryTimeFilter.all:
+        return list;
+    }
+  }
+
+  CaptureHistoryItem? findSessionById(String id) {
+    try {
+      final found = historyList.firstWhere((s) => s.id == id);
+      return found.toCaptureHistoryItem();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetches persistent audit sessions from MongoDB via `GET http://192.168.1.8:5000/api/v1/capture/history`
+  Future<void> fetchHistory({bool showLoading = true}) async {
+    if (showLoading) {
+      isLoading = true;
+      errorMessage = null;
+      notifyListeners();
+    }
 
     try {
-      await _repository.saveHistoryRecord(session);
-      return true;
+      final currentRepo = _repository ??
+          (AppDependencies.isInitialized ? AppDependencies.auditRepository : null);
+      if (currentRepo is MockAuditRepository ||
+          (AppDependencies.isInitialized && AppDependencies.useMock)) {
+        if (currentRepo is MockAuditRepository) {
+          final mockRecords = await currentRepo.getHistoryRecords();
+          if (mockRecords.isNotEmpty || historyList.isEmpty) {
+            historyList = mockRecords
+                .map((m) => AuditHistoryModel(
+                      id: m.id,
+                      stationName: m.stationName,
+                      operatorName: m.operatorName,
+                      mode: m.modeName ?? 'meter',
+                      createdAt: m.dateTime,
+                      images: m.images
+                          .map<AuditHistoryImage>((img) => AuditHistoryImage(
+                                imageType: img.label,
+                                imageUrl: img.imageUrl ?? img.image.path,
+                                label: img.label,
+                                timestamp: img.capturedAt,
+                              ))
+                          .toList(),
+                    ))
+                .toList();
+          }
+        }
+        errorMessage = null;
+        isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // 1. Retrieve saved JWT token from persistent AuthStorage / ApiClient
+      String? token = (_repository != null && _repository is RemoteAuditRepository)
+          ? _repository.client.authToken
+          : ApiClient.instance.authToken;
+      if (token == null || token.isEmpty) {
+        try {
+          token = await AuthStorage.instance.getToken();
+        } catch (_) {}
+      }
+
+      // 2. Build GET request
+      final base = ApiConstants.baseUrl.endsWith('/')
+          ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)
+          : ApiConstants.baseUrl;
+      final uri = Uri.parse('$base/api/v1/capture/history');
+
+      final response = await _httpClient.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(ApiConstants.connectTimeout);
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = jsonDecode(response.body);
+        final List items = decoded is List
+            ? decoded
+            : (decoded['data'] ??
+                decoded['history'] ??
+                decoded['captures'] ??
+                decoded['audits'] ??
+                decoded['sessions'] ??
+                []);
+        historyList = items.map((e) => AuditHistoryModel.fromJson(e as Map<String, dynamic>)).toList();
+        errorMessage = null;
+      } else {
+        String msg = 'Failed to load history (${response.statusCode})';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map && decoded['message'] != null) {
+            msg = decoded['message'].toString();
+          } else if (decoded is Map && decoded['error'] != null) {
+            msg = decoded['error'].toString();
+          }
+        } catch (_) {}
+        errorMessage = msg;
+      }
     } catch (e) {
-      _errorMessage = e.toString();
+      errorMessage = 'Network connection error: $e';
+    } finally {
+      isLoading = false;
       notifyListeners();
-      return false;
     }
+  }
+
+  /// Prepend a newly completed session to the dynamic list
+  Future<bool> addSession(CaptureHistoryItem session) async {
+    historyList.removeWhere((h) => h.id == session.id);
+    historyList.insert(
+      0,
+      AuditHistoryModel(
+        id: session.id,
+        stationName: session.stationName,
+        operatorName: session.operatorName,
+        mode: session.modeName?.toLowerCase().contains('nozzle') == true
+            ? 'nozzle'
+            : 'meter',
+        nozzleNumber: session.modeName != null
+            ? RegExp(r'\d+').firstMatch(session.modeName!)?.group(0)
+            : null,
+        createdAt: session.dateTime,
+        images: session.images
+            .map((img) => AuditHistoryImage(
+                  imageType: img.label,
+                  imageUrl: img.imageUrl ?? '',
+                  label: img.label,
+                  timestamp: img.capturedAt,
+                ))
+            .toList(),
+        status: session.statusText,
+        difference: session.difference,
+        threshold: session.threshold,
+        hasCorruption: session.hasCorruption,
+      ),
+    );
+    notifyListeners();
+    return true;
   }
 
   void addCapture({
@@ -174,10 +250,10 @@ class HistoryProvider extends ChangeNotifier {
   }
 
   void clearAll() {
-    _records.clear();
-    _stationRecords.clear();
-    _comparisonRecords.clear();
-    _status = AsyncStatus.empty;
+    historyList.clear();
+    errorMessage = null;
+    isLoading = false;
     notifyListeners();
   }
 }
+

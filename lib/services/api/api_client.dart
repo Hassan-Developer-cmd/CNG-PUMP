@@ -19,6 +19,9 @@ class ApiClient {
   /// Singleton instance for shared app-wide network access.
   static final ApiClient instance = ApiClient();
 
+  /// Exposes the underlying HTTP client for shared network calls and mocking
+  http.Client get httpClient => _httpClient;
+
   /// Gets the current Bearer Token
   String? get authToken => _authToken;
 
@@ -232,12 +235,14 @@ class ApiClient {
       if (files != null) {
         for (final entry in files.entries) {
           final file = entry.value;
-          if (await file.exists()) {
+          if (file.existsSync()) {
             final ext = file.path.toLowerCase().endsWith('.png') ? 'png' : 'jpeg';
             final mediaType = contentType ?? MediaType('image', ext);
-            final multipartFile = await http.MultipartFile.fromPath(
+            final filename = file.path.split(RegExp(r'[\\/]')).last;
+            final multipartFile = http.MultipartFile.fromBytes(
               entry.key,
-              file.path,
+              file.readAsBytesSync(),
+              filename: filename,
               contentType: mediaType,
             );
             request.files.add(multipartFile);

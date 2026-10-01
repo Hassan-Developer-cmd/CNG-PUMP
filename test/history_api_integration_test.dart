@@ -18,6 +18,7 @@ import 'package:cng_pump/repositories/audit_repository.dart';
 import 'package:cng_pump/screens/history/history_screen.dart';
 import 'package:cng_pump/services/api/api_client.dart';
 import 'package:cng_pump/widgets/history/audit_session_card.dart';
+import 'package:cng_pump/widgets/history/audit_history_card.dart';
 import 'package:cng_pump/widgets/shared_widgets/async_state_view.dart';
 
 Widget _buildTestApp(Widget child, {required HistoryProvider historyProvider}) {
@@ -286,8 +287,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('No audit history found'), findsOneWidget);
-      expect(find.byType(AuditSessionCard), findsNothing);
+      expect(find.text('No audit history found in database'), findsOneWidget);
+      expect(find.byType(AuditHistoryCard), findsNothing);
     });
 
     testWidgets('Success State: Renders populated cards dynamically with backend data and images', (tester) async {
@@ -340,9 +341,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Card dynamically rendered
-      expect(find.byType(AuditSessionCard), findsOneWidget);
+      expect(find.byType(AuditHistoryCard), findsOneWidget);
       expect(find.text('Lahore City Central Station'), findsOneWidget);
-      expect(find.text('Bilal Haider'), findsOneWidget);
+      expect(find.text('Op: Bilal Haider'), findsOneWidget);
       expect(find.text('Nozzle 1'), findsOneWidget);
     });
 
