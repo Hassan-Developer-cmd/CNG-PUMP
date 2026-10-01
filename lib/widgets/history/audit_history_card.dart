@@ -119,7 +119,7 @@ class AuditHistoryCard extends StatelessWidget {
                                 ),
                                 SizedBox(height: 2.h),
                                 Text(
-                                  'Op: ${item.operatorName}',
+                                  'Op: ${item.formattedOperatorBadge}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(

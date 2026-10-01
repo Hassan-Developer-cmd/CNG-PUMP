@@ -20,7 +20,7 @@ class HistoryProvider extends ChangeNotifier {
   final http.Client _httpClient;
   final dynamic _repository;
 
-  List<AuditHistoryModel> historyList = [];
+  List<AuditSessionModel> historyList = [];
   bool isLoading = false;
   String? errorMessage;
   HistoryTimeFilter _selectedFilter = HistoryTimeFilter.all;
@@ -31,6 +31,8 @@ class HistoryProvider extends ChangeNotifier {
             (repository != null && repository is RemoteAuditRepository
                 ? repository.client.httpClient
                 : ApiClient.instance.httpClient);
+
+  AuthStorage get secureStorage => AuthStorage.instance;
 
   bool get hasError => errorMessage != null && errorMessage!.isNotEmpty;
   bool get isEmpty => historyList.isEmpty;
@@ -106,7 +108,7 @@ class HistoryProvider extends ChangeNotifier {
           final mockRecords = await currentRepo.getHistoryRecords();
           if (mockRecords.isNotEmpty || historyList.isEmpty) {
             historyList = mockRecords
-                .map((m) => AuditHistoryModel(
+                .map((m) => AuditSessionModel(
                       id: m.id,
                       stationName: m.stationName,
                       operatorName: m.operatorName,
@@ -130,24 +132,13 @@ class HistoryProvider extends ChangeNotifier {
         return;
       }
 
-      // 1. Retrieve saved JWT token from persistent AuthStorage / ApiClient
-      String? token = (_repository != null && _repository is RemoteAuditRepository)
-          ? _repository.client.authToken
-          : ApiClient.instance.authToken;
-      if (token == null || token.isEmpty) {
-        try {
-          token = await AuthStorage.instance.getToken();
-        } catch (_) {}
-      }
-
-      // 2. Build GET request
-      final base = ApiConstants.baseUrl.endsWith('/')
-          ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)
-          : ApiConstants.baseUrl;
-      final uri = Uri.parse('$base/api/v1/capture/history');
+      final token = await secureStorage.read(key: 'auth_token') ??
+          (_repository != null && _repository is RemoteAuditRepository
+              ? _repository.client.authToken
+              : ApiClient.instance.authToken);
 
       final response = await _httpClient.get(
-        uri,
+        Uri.parse('http://192.168.1.8:5000/api/v1/capture/history'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -157,30 +148,32 @@ class HistoryProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final dynamic decoded = jsonDecode(response.body);
-        final List items = decoded is List
+        final List rawList = decoded is List
             ? decoded
             : (decoded['data'] ??
                 decoded['history'] ??
+                decoded['sessions'] ??
                 decoded['captures'] ??
                 decoded['audits'] ??
-                decoded['sessions'] ??
                 []);
-        historyList = items.map((e) => AuditHistoryModel.fromJson(e as Map<String, dynamic>)).toList();
+
+        historyList = rawList.map((item) => AuditSessionModel.fromJson(item)).toList();
         errorMessage = null;
       } else {
-        String msg = 'Failed to load history (${response.statusCode})';
+        String msg = 'Failed to fetch audit history (${response.statusCode})';
         try {
-          final decoded = jsonDecode(response.body);
-          if (decoded is Map && decoded['message'] != null) {
-            msg = decoded['message'].toString();
-          } else if (decoded is Map && decoded['error'] != null) {
-            msg = decoded['error'].toString();
+          final dynamic errDecoded = jsonDecode(response.body);
+          if (errDecoded is Map) {
+            final serverMsg = errDecoded['message'] ?? errDecoded['error'];
+            if (serverMsg != null && serverMsg.toString().isNotEmpty) {
+              msg = serverMsg.toString();
+            }
           }
         } catch (_) {}
         errorMessage = msg;
       }
     } catch (e) {
-      errorMessage = 'Network connection error: $e';
+      errorMessage = 'Network connection failed: $e';
     } finally {
       isLoading = false;
       notifyListeners();

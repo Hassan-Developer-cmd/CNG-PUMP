@@ -191,5 +191,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 }
 
-/// Dynamic alias for AuditHistoryScreen
+/// Dynamic alias for AuditHistoryScreen & AdminAuditScreen
 typedef AuditHistoryScreen = HistoryScreen;
+typedef AdminAuditScreen = HistoryScreen;

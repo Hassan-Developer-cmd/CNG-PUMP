@@ -65,7 +65,7 @@ class AuditHistoryImage {
   }
 
   /// Normalizes any relative or partial image URL to a full backend URL.
-  /// (e.g. `uploads/123.jpg` -> `http://192.168.1.8:5000/uploads/123.jpg`)
+  /// (e.g. `/uploads/123.jpg` -> `http://192.168.1.8:5000/uploads/123.jpg`)
   static String normalizeImageUrl(String raw) {
     final trimmed = raw.trim();
     if (trimmed.isEmpty) return '';
@@ -73,18 +73,17 @@ class AuditHistoryImage {
       return trimmed;
     }
 
-    final base = ApiConstants.baseUrl.endsWith('/')
-        ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)
-        : ApiConstants.baseUrl;
+    final base = ApiConstants.baseUrl.isNotEmpty
+        ? (ApiConstants.baseUrl.endsWith('/')
+            ? ApiConstants.baseUrl.substring(0, ApiConstants.baseUrl.length - 1)
+            : ApiConstants.baseUrl)
+        : 'http://192.168.1.8:5000';
 
-    if (trimmed.startsWith('/')) {
-      return '$base$trimmed';
-    }
-    if (trimmed.startsWith('uploads/')) {
-      return '$base/$trimmed';
-    }
-    return '$base/uploads/$trimmed';
+    return '$base${trimmed.startsWith('/') ? '' : '/'}$trimmed';
   }
+
+  String get path => imageUrl;
+  String get url => imageUrl;
 
   /// Human-friendly label for raw imageType backend values
   static String formatImageTypeLabel(String type) {
@@ -157,10 +156,15 @@ class AuditHistoryModel {
     this.hasCorruption = false,
   });
 
-  factory AuditHistoryModel.fromJson(Map<String, dynamic> json) {
+  factory AuditHistoryModel.fromJson(dynamic rawJson) {
+    final Map<String, dynamic> json = rawJson is Map<String, dynamic>
+        ? rawJson
+        : (rawJson is Map
+            ? rawJson.map((k, v) => MapEntry(k.toString(), v))
+            : <String, dynamic>{});
+
     // 1. Resolve ID (_id or id)
-    final id = json['id'] as String? ??
-        json['_id'] as String? ??
+    final id = (json['id'] ?? json['_id'])?.toString() ??
         'aud_${DateTime.now().millisecondsSinceEpoch}';
 
     // 2. Resolve Station Details
@@ -315,6 +319,27 @@ class AuditHistoryModel {
     );
   }
 
+  String get captureType => mode;
+
+  /// Formatted mode details: "Meter Audit" or "Nozzle X Audit"
+  String get formattedModeDetails {
+    if (mode.toLowerCase() == 'meter') {
+      return 'Meter Audit';
+    }
+    if (nozzleNumber != null && nozzleNumber!.isNotEmpty) {
+      return 'Nozzle $nozzleNumber Audit';
+    }
+    return 'Nozzle Audit';
+  }
+
+  /// Formatted operator badge with ID if present: e.g. "adnangul (ID: ...)"
+  String get formattedOperatorBadge {
+    if (operatorId != null && operatorId!.isNotEmpty) {
+      return '$operatorName (ID: $operatorId)';
+    }
+    return operatorName;
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'stationName': stationName,
@@ -331,3 +356,6 @@ class AuditHistoryModel {
         'hasCorruption': hasCorruption,
       };
 }
+
+/// Dynamic alias for AuditSessionModel matching backend API naming specification
+typedef AuditSessionModel = AuditHistoryModel;
