@@ -11,6 +11,9 @@ class ApiEndpoints {
   /// POST: Admin login with email and password
   static const String adminLogin = '/api/v1/auth/adminlogin';
 
+  /// POST: Super Admin login with email and password
+  static const String superAdminLogin = '/api/v1/auth/superadminlogin';
+
   /// POST: Operator login with operator ID / email and password
   static const String operatorLogin = '/api/v1/auth/adminlogin';
 

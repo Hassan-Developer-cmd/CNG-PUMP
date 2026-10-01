@@ -177,4 +177,44 @@ class AuthStorage {
       }
     } catch (_) {}
   }
+
+  /// Compatibility storage API: write key-value pair
+  Future<void> write({required String key, required dynamic value}) async {
+    final strValue = value?.toString() ?? '';
+    _inMemoryFallback[key] = strValue;
+    if (key == 'auth_token' || key == _keyToken) {
+      await saveToken(strValue);
+    }
+    try {
+      final prefs = await _getPrefs();
+      await prefs?.setString(key, strValue);
+    } catch (_) {}
+  }
+
+  /// Compatibility storage API: read string value by key
+  Future<String?> read({required String key}) async {
+    if (key == 'auth_token' || key == _keyToken) {
+      return getToken();
+    }
+    try {
+      final prefs = await _getPrefs();
+      if (prefs != null) {
+        final val = prefs.getString(key);
+        if (val != null) return val;
+      }
+    } catch (_) {}
+    return _inMemoryFallback[key] as String?;
+  }
+
+  /// Compatibility storage API: delete key
+  Future<void> delete({required String key}) async {
+    _inMemoryFallback.remove(key);
+    if (key == 'auth_token' || key == _keyToken) {
+      await clear();
+    }
+    try {
+      final prefs = await _getPrefs();
+      await prefs?.remove(key);
+    } catch (_) {}
+  }
 }

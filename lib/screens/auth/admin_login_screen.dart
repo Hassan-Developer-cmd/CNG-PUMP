@@ -40,9 +40,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     final password = _passwordController.text;
 
     try {
-      final success = await context.read<AdminAuthProvider>().login(
-        email,
-        password,
+      final success = await context.read<AdminAuthProvider>().loginSuperAdmin(
+        email: email,
+        password: password,
       );
 
       if (!mounted) return;
@@ -55,15 +55,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         );
       } else {
         final error = context.read<AdminAuthProvider>().errorMessage ??
-            'Invalid credentials or server unreachable';
+            'Login failed. Please check credentials or network connection.';
         _showError(error);
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      final error = e is ApiException
-          ? e.message
-          : 'Invalid credentials or server unreachable';
+      final error = context.read<AdminAuthProvider>().errorMessage ??
+          (e is ApiException ? e.message : 'Network error: $e');
       _showError(error);
     }
   }
@@ -94,6 +93,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authLoading = context.watch<AdminAuthProvider>().isLoading;
+    final isButtonLoading = _isLoading || authLoading;
+
     return Scaffold(
       backgroundColor: AppColors.figmaDarkGreen,
       appBar: AppBar(
@@ -303,7 +305,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                 height: 48,
                                 child: ElevatedButton(
                                   onPressed:
-                                      _isLoading ? null : _handleAdminLogin,
+                                      isButtonLoading ? null : _handleAdminLogin,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.figmaPrimaryBtn,
                                     elevation: 0,
@@ -311,7 +313,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                  child: _isLoading
+                                  child: isButtonLoading
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
