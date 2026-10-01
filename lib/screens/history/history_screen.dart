@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
-import '../../constants/app_constants.dart';
 import '../../providers/history_provider.dart';
-import '../../widgets/history/history_card.dart';
+import '../../widgets/dashboard/dashboard_bottom_nav_bar.dart';
+import '../../widgets/history/audit_session_card.dart';
+import '../../widgets/shared_widgets/async_state_view.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
-import '../result_screen/result_screen.dart';
+import 'admin_audit_detail_screen.dart';
+import 'audit_photo_fullscreen_viewer.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -15,110 +18,122 @@ class HistoryScreen extends StatefulWidget {
 }
 
 class _HistoryScreenState extends State<HistoryScreen> {
-  static const int _pageSize = 5;
-  int _visibleCount = _pageSize;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<HistoryProvider>().fetchHistory();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool canPop = Navigator.canPop(context);
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      appBar: const CustomCurvedAppBar(
-        title: AppConstants.appName,
-        showLogo: true,
+      appBar: CustomCurvedAppBar(
+        title: 'Audit Ledger & History',
+        showBackButton: canPop,
+        showLogo: !canPop,
+        onBackPressed: canPop ? () => Navigator.of(context).pop() : null,
       ),
-      body: Consumer<HistoryProvider>(
-        builder: (context, historyProvider, child) {
-          final records = historyProvider.records;
-
-          if (records.isEmpty) return _buildEmptyState();
-
-          final visibleRecords = records.take(_visibleCount).toList();
-          final hasMore = _visibleCount < records.length;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () => context.read<HistoryProvider>().fetchHistory(),
+          color: AppColors.figmaEmerald,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  AppConstants.historyTitle,
+                // Clean Minimal Screen Header (Title only, no subtitle, no filter chips, no tab switchers)
+                Text(
+                  'Audit Inspection & Logs',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  AppConstants.historySubtitle,
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 16),
-                ...visibleRecords.map(
-                  (record) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: HistoryCard(
-                      record: record,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ResultScreen(historyRecord: record),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (hasMore)
-                  Center(
-                    child: TextButton(
-                      onPressed: () => setState(() => _visibleCount += _pageSize),
-                      style: TextButton.styleFrom(
-                        backgroundColor: AppColors.headerGray,
-                        foregroundColor: AppColors.textPrimary,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                      ),
-                      child: const Text(
-                        AppConstants.loadMoreRecords,
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
+                SizedBox(height: 14.h),
+
+                // Visual Photo Feed of Audit Sessions
+                _buildVisualPhotoFeed(),
+                SizedBox(height: 16.h),
               ],
             ),
-          );
-        },
+          ),
+        ),
       ),
+      bottomNavigationBar:
+          canPop ? null : const DashboardBottomNavBar(currentIndex: 1),
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: const BoxDecoration(color: AppColors.lightTeal, shape: BoxShape.circle),
-              child: const Icon(Icons.history_rounded, size: 34, color: AppColors.primaryTeal),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              AppConstants.noHistoryYet,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              AppConstants.noHistorySubtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildVisualPhotoFeed() {
+    return Consumer<HistoryProvider>(
+      builder: (context, provider, _) {
+        final sessions = provider.auditSessions;
+
+        return AsyncStateView(
+          status: provider.isLoading
+              ? AsyncStatus.loading
+              : provider.hasError
+                  ? AsyncStatus.error
+                  : sessions.isEmpty
+                      ? AsyncStatus.empty
+                      : AsyncStatus.loaded,
+          errorMessage: provider.errorMessage,
+          emptyTitle: 'No audit history found',
+          emptySubtitle:
+              'Live operator audit sessions and captured photos will appear here in real-time.',
+          emptyIcon: Icons.photo_library_outlined,
+          onRetry: provider.fetchHistory,
+          child: Column(
+            children: [
+              for (int i = 0; i < sessions.length; i++)
+                Padding(
+                  padding: EdgeInsets.only(bottom: 14.h),
+                  child: AuditSessionCard(
+                    session: sessions[i],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              AdminAuditDetailScreen(session: sessions[i]),
+                        ),
+                      );
+                    },
+                    onImageTap: (imgIndex) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AuditPhotoFullscreenViewer(
+                            images: sessions[i].images,
+                            initialIndex: imgIndex,
+                            stationName: sessions[i].stationName,
+                            operatorName: sessions[i].operatorName,
+                            modeName: sessions[i].modeName,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
+
+/// Dynamic alias for AuditHistoryScreen
+typedef AuditHistoryScreen = HistoryScreen;

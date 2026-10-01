@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
+import '../../providers/capture_provider.dart';
 
 class UserProfileHeader extends StatelessWidget {
   final String userName;
+  final String? selectedMode;
 
   const UserProfileHeader({
     super.key,
     this.userName = AppConstants.defaultUserName,
+    this.selectedMode,
   });
 
   @override
@@ -24,7 +28,7 @@ class UserProfileHeader extends StatelessWidget {
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6.r,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -32,13 +36,29 @@ class UserProfileHeader extends StatelessWidget {
         children: [
           _buildAvatar(),
           SizedBox(width: 14.w),
-          Text(
-            userName,
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
+          Builder(
+            builder: (context) {
+              CaptureProvider? provider;
+              try {
+                provider = Provider.of<CaptureProvider>(context, listen: true);
+              } catch (_) {
+                provider = null;
+              }
+
+              final modeName = selectedMode ?? provider?.selectedMode ?? '';
+              final displayName = modeName.isNotEmpty
+                  ? (userName.endsWith(modeName) ? userName : '$userName $modeName')
+                  : userName;
+
+              return Text(
+                displayName,
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -62,7 +82,7 @@ class UserProfileHeader extends StatelessWidget {
         ],
       ),
       child: Center(
-        child: Icon(Icons.person, color: Color(0xFF5D4037), size: 28.sp),
+        child: Icon(Icons.person, color: const Color(0xFF5D4037), size: 28.sp),
       ),
     );
   }

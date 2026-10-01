@@ -51,4 +51,31 @@ class AppColors {
   // Dividers & Borders
   static const Color divider = Color(0xFFE2E8F0);
   static const Color borderLight = Color(0xFFE2E8F0);
+
+  // Figma Admin Theme Palette
+  static const Color figmaDarkGreen = Color(0xFF064E3B);
+  static const Color figmaDeepGreen = Color(0xFF04382A);
+  static const Color figmaEmerald = Color(0xFF056044);
+  static const Color figmaPrimaryBtn = Color(0xFF0D5D44);
+  static const Color figmaCardBg = Colors.white;
+
+  // Active / Inactive / Checked Badges
+  static const Color badgeActiveBg = Color(0xFFD1FAE5);
+  static const Color badgeActiveText = Color(0xFF065F46);
+  static const Color badgeInactiveBg = Color(0xFFFEE2E2);
+  static const Color badgeInactiveText = Color(0xFFB91C1C);
+  static const Color badgeCheckedBg = Color(0xFFDCFCE7);
+  static const Color badgeCheckedText = Color(0xFF15803D);
+
+  // Filter Chips
+  static const Color chipActiveBg = Color(0xFF0D5D44);
+  static const Color chipActiveText = Colors.white;
+  static const Color chipInactiveBg = Color(0xFFF1F5F9);
+  static const Color chipInactiveText = Color(0xFF64748B);
+
+  // Logout & Destructive
+  static const Color logoutRed = Color(0xFFDC2626);
+  static const Color errorRed = Color(0xFFDC2626);
+  static const Color logoutBorder = Color(0xFFFCA5A5);
+  static const Color logoutBg = Color(0xFFFEF2F2);
 }

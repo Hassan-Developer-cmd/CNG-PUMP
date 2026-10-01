@@ -45,6 +45,28 @@ class HistoryCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (record.modeName != null) ...[
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.lightTeal,
+                        borderRadius: BorderRadius.circular(6.r),
+                        border: Border.all(
+                          color: AppColors.primaryTeal.withValues(alpha: 0.3),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Text(
+                        record.modeName!,
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryTeal,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                  ],
                   Icon(Icons.chevron_right, size: 20.sp, color: AppColors.textMuted),
                 ],
               ),

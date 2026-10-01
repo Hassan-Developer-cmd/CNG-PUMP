@@ -13,6 +13,11 @@ class AppConstants {
   static const String microMotion = 'Micro Motion';
   static const String suiGas = 'Sui Gas';
 
+  static const String nozzle1 = 'Nozzle 1';
+  static const String nozzle2 = 'Nozzle 2';
+  static const String nozzle3 = 'Nozzle 3';
+  static const String nozzle4 = 'Nozzle 4';
+
   // Nozzle / Meter primary-source toggle
   static const String nozzleLabel = 'Nozzle';
   static const String meterLabel = 'Meter';
@@ -44,8 +49,49 @@ class AppConstants {
 
   // Informational text
   static const String infoNoteText =
-      'Capture the sources in order. After each required picture, the next required picture must be captured within 2 minutes. '
-      'Micro Motion is optional.';
+      'Digital Machine, Micro Motion and Sui Gas Reading requires one snapshot each. Nozzle 1 & Nozzle 2 each snapshot within 2 minutes.';
 
   static const String alignDisplayPrompt = 'Align display within frame';
+
+  // Admin Flow Constants
+  static const String pumpAdminSubtitle = 'Pump Admin';
+  static const String brandTagline = 'Secure • Reliable • CNG Solution';
+  static const String navPumps = 'Pumps';
+  static const String navSettings = 'Settings';
+  static const String addNewPump = 'Add New Pump';
+  static const String pumpInformation = 'Pump Information';
+  static const String pumpAddedSuccessfully = 'Pump Added Successfully!';
+  static const String pumpAddedSubtitle =
+      'The new pump has been added to the system.';
+  static const String viewPump = 'View Pump';
+  static const String backToList = 'Back to List';
+
+  // Station Categories
+  static const String catFuelPump = 'Fuel Pump';
+  static const String catVehicle = 'Vehicle';
+  static const String catMeter = 'Meter';
+  static const String catOther = 'Other';
+
+  // History Filter Chips
+  static const String filterAll = 'All';
+  static const String filterToday = 'Today';
+  static const String filterLast7Days = 'Last 7 Days';
+  static const String filterLast30Days = 'Last 30 Days';
+
+  // Auth Flow Constants
+  static const String userLoginTitle = 'User Login';
+  static const String userLoginSubtitle =
+      'Sign in with your station operator or staff ID';
+  static const String adminLoginTitle = 'Admin Login';
+  static const String adminLoginSubtitle =
+      'Station Administrator & Management Access';
+  static const String loginAsAdmin = 'Login as Admin';
+  static const String backToUserLogin = 'Back to User Login';
+  static const String adminDashboardTitle = 'Admin Dashboard';
+  static const String adminDashboardSubtitle =
+      'Main Station - CNG Hub #01 Overview';
+  static const String enterAdminDashboard = 'Enter Admin Dashboard';
+  static const String userLoginButton = 'Login';
+  static const String adminLoginButton = 'Login as Admin';
 }
+

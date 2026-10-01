@@ -5,7 +5,9 @@ import '../../constants/app_constants.dart';
 import '../../constants/app_typography.dart';
 
 class InfoNoteCard extends StatelessWidget {
-  const InfoNoteCard({super.key});
+  final String? text;
+
+  const InfoNoteCard({super.key, this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,7 @@ class InfoNoteCard extends StatelessWidget {
           SizedBox(width: 12.w),
           Expanded(
             child: Text(
-              AppConstants.infoNoteText,
+              text ?? AppConstants.infoNoteText,
               style: AppTypography.infoText,
             ),
           ),

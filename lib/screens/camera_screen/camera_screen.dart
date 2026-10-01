@@ -549,6 +549,80 @@ class _CameraScreenState extends State<CameraScreen>
               ),
             ),
 
+          // Layer 4b: Distance & Countdown Indicators below scan window
+          if (!_isInitializing && _errorMessage == null)
+            Positioned(
+              top: scanWindowRect.bottom + 14.h,
+              left: 20.w,
+              right: 20.w,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 6.r,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Distance 45 cm',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 6.r,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.timer_outlined,
+                          color: AppColors.dashedRed,
+                          size: 13.sp,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          '1:52 Left To Capture',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.dashedRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Layer 5: Top Bar and Controls.
           SafeArea(
             child: Column(

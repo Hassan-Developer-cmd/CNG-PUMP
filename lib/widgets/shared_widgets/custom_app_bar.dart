@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../constants/app_typography.dart';
+import '../../providers/capture_provider.dart';
+import '../../screens/auth/login_screen.dart';
 
 class CustomCurvedAppBar extends StatelessWidget
     implements PreferredSizeWidget {
@@ -45,7 +48,26 @@ class CustomCurvedAppBar extends StatelessWidget
                     color: Colors.white,
                     size: 24,
                   ),
-                  onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+                  onPressed: onBackPressed ??
+                      () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        } else {
+                          try {
+                            final captureProvider =
+                                context.read<CaptureProvider>();
+                            captureProvider.stopAndRemoveTimer();
+                            captureProvider.clearAll();
+                          } catch (_) {}
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      },
                   tooltip: 'Back',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
