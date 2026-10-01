@@ -36,6 +36,15 @@ class OperatorUserScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final capture = Provider.of<CaptureProvider>(context, listen: false);
+        if (capture.operatorName != userName) {
+          capture.setOperatorName(userName);
+        }
+      } catch (_) {}
+    });
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: PreferredSize(
@@ -127,8 +136,8 @@ class OperatorUserScreen extends StatelessWidget {
               ),
             ),
             // Embedded Dashboard Screen for Taking Readings
-            const Expanded(
-              child: DashboardScreen(),
+            Expanded(
+              child: DashboardScreen(operatorName: userName),
             ),
           ],
         ),

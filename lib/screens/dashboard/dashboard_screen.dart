@@ -27,11 +27,13 @@ String dropdowntext = "Dummy";
 class DashboardScreen extends StatelessWidget {
   final bool showBackButton;
   final VoidCallback? onBackPressed;
+  final String? operatorName;
 
   const DashboardScreen({
     super.key,
     this.showBackButton = false,
     this.onBackPressed,
+    this.operatorName,
   });
 
   void _handleBackToLogin(BuildContext context) {
@@ -406,7 +408,7 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   // 1. User Profile Card
                   UserProfileHeader(
-                    userName: provider.operatorName,
+                    userName: operatorName ?? provider.operatorName,
                     selectedMode: provider.selectedMode,
                   ),
                   SizedBox(height: 14.h),

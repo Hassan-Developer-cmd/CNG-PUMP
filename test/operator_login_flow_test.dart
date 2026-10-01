@@ -252,7 +252,8 @@ void main() {
       // Verify navigation to Operator screen with dynamic MongoDB data
       expect(find.byType(LoginScreen), findsNothing);
       expect(find.byType(OperatorUserScreen), findsOneWidget);
-      expect(find.textContaining('Hamza Tariq'), findsOneWidget);
+      expect(find.textContaining('Operator: Hamza Tariq'), findsOneWidget);
+      expect(find.text('Hamza Tariq Meter'), findsOneWidget);
       expect(find.textContaining('Islamabad CNG Station #04'), findsOneWidget);
     });
 

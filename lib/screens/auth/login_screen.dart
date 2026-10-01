@@ -4,6 +4,7 @@ import '../../constants/api_constants.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
 import '../../providers/admin_auth_provider.dart';
+import '../../providers/user_provider.dart';
 import '../../services/api/api_exception.dart';
 import '../../services/api/auth_storage.dart';
 import '../../widgets/auth/auth_header.dart';
@@ -108,6 +109,9 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _isLoading = false);
 
       if (user != null) {
+        try {
+          context.read<UserProvider>().setCurrentUser(user);
+        } catch (_) {}
         final cleanEmail = email;
         final displayName = user.name.isNotEmpty
             ? user.name

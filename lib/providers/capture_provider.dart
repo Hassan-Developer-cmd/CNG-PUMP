@@ -180,7 +180,20 @@ class CaptureProvider extends ChangeNotifier {
   }
 
   AuditConfigModel get auditConfig => _auditConfig;
-  String get operatorName => _auditConfig.operatorName;
+  String? _customOperatorName;
+  bool get hasCustomOperatorName =>
+      _customOperatorName != null && _customOperatorName!.trim().isNotEmpty;
+
+  String get operatorName => _customOperatorName ?? _auditConfig.operatorName;
+
+  void setOperatorName(String name) {
+    final trimmed = name.trim();
+    if (_customOperatorName != trimmed) {
+      _customOperatorName = trimmed;
+      notifyListeners();
+    }
+  }
+
   String get operatorId => _auditConfig.operatorId;
   String get stationName => _auditConfig.stationName;
   List<String> get availableNozzles => _auditConfig.availableNozzles;

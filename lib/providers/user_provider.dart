@@ -10,12 +10,20 @@ class UserProvider extends ChangeNotifier {
   UserRole? _selectedRole;
   AsyncStatus _status = AsyncStatus.empty;
   String? _errorMessage;
+  CngUser? _currentUser;
 
   final List<CngUser> _users = [];
 
   UserProvider({UserRepository? repository})
       : _repository = repository ?? _resolveRepository() {
     _status = AsyncStatus.empty;
+  }
+
+  CngUser? get currentUser => _currentUser;
+
+  void setCurrentUser(CngUser? user) {
+    _currentUser = user;
+    notifyListeners();
   }
 
   static UserRepository _resolveRepository() {

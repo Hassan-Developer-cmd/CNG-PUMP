@@ -68,6 +68,8 @@ class CngUser {
     );
   }
 
+  String get username => name.isNotEmpty ? name : (email.contains('@') ? email.split('@').first : email);
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

@@ -203,4 +203,17 @@ class AdminAuthProvider extends ChangeNotifier {
     _profile = profile.copyWith(notificationsEnabled: enabled);
     notifyListeners();
   }
+
+  void setCurrentUser(CngUser? user) {
+    _currentUser = user;
+    if (user != null) {
+      _isLoggedIn = true;
+      _profile = AdminProfile(
+        name: user.name,
+        username: user.email,
+        email: user.email,
+      );
+    }
+    notifyListeners();
+  }
 }

@@ -3,17 +3,26 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../constants/app_constants.dart';
+import '../../providers/admin_auth_provider.dart';
 import '../../providers/capture_provider.dart';
+import '../../providers/user_provider.dart';
 
 class UserProfileHeader extends StatelessWidget {
-  final String userName;
+  final String? userName;
   final String? selectedMode;
 
   const UserProfileHeader({
     super.key,
-    this.userName = AppConstants.defaultUserName,
+    this.userName,
     this.selectedMode,
   });
+
+  static String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    final trimmed = s.trim();
+    if (trimmed.isEmpty) return trimmed;
+    return trimmed[0].toUpperCase() + trimmed.substring(1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,29 +45,116 @@ class UserProfileHeader extends StatelessWidget {
         children: [
           _buildAvatar(),
           SizedBox(width: 14.w),
-          Builder(
-            builder: (context) {
-              CaptureProvider? provider;
-              try {
-                provider = Provider.of<CaptureProvider>(context, listen: true);
-              } catch (_) {
-                provider = null;
-              }
+          Expanded(
+            child: Builder(
+              builder: (context) {
+                // 1. Resolve providers safely
+                UserProvider? userProvider;
+                try {
+                  userProvider = Provider.of<UserProvider>(context, listen: true);
+                } catch (_) {}
 
-              final modeName = selectedMode ?? provider?.selectedMode ?? '';
-              final displayName = modeName.isNotEmpty
-                  ? (userName.endsWith(modeName) ? userName : '$userName $modeName')
-                  : userName;
+                AdminAuthProvider? authProvider;
+                try {
+                  authProvider = Provider.of<AdminAuthProvider>(context, listen: true);
+                } catch (_) {}
 
-              return Text(
-                displayName,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              );
-            },
+                CaptureProvider? captureProvider;
+                try {
+                  captureProvider = Provider.of<CaptureProvider>(context, listen: true);
+                } catch (_) {}
+
+                // 2. Read dynamic operator name directly from UserProvider, AuthState, or session
+                String? dynamicOperatorName;
+
+                // Priority A: UserProvider
+                final userFromProvider = userProvider?.currentUser;
+                if (userFromProvider != null) {
+                  final name = userFromProvider.name.isNotEmpty
+                      ? userFromProvider.name
+                      : userFromProvider.username;
+                  if (name.trim().isNotEmpty) {
+                    dynamicOperatorName = name.trim();
+                  }
+                }
+
+                // Priority B: AdminAuthProvider / AuthState
+                if (dynamicOperatorName == null || dynamicOperatorName.isEmpty) {
+                  final authUser = authProvider?.currentUser;
+                  if (authUser != null) {
+                    final name = authUser.name.isNotEmpty
+                        ? authUser.name
+                        : authUser.username;
+                    if (name.trim().isNotEmpty) {
+                      dynamicOperatorName = name.trim();
+                    }
+                  } else if (authProvider?.profile.name.isNotEmpty == true &&
+                      authProvider!.profile.name.trim() != 'Admin') {
+                    dynamicOperatorName = authProvider.profile.name.trim();
+                  }
+                }
+
+                // Priority C: Explicit userName passed into widget (if not default 'Ali')
+                if (dynamicOperatorName == null || dynamicOperatorName.isEmpty) {
+                  if (userName != null &&
+                      userName!.trim().isNotEmpty &&
+                      userName!.trim() != 'Ali' &&
+                      userName!.trim() != AppConstants.defaultUserName) {
+                    dynamicOperatorName = userName!.trim();
+                  }
+                }
+
+                // Priority D: CaptureProvider custom operator name
+                if (dynamicOperatorName == null || dynamicOperatorName.isEmpty) {
+                  if (captureProvider != null && captureProvider.hasCustomOperatorName) {
+                    dynamicOperatorName = captureProvider.operatorName;
+                  }
+                }
+
+                // Priority E: Explicit userName passed into widget (even if default)
+                if (dynamicOperatorName == null || dynamicOperatorName.isEmpty) {
+                  if (userName != null && userName!.trim().isNotEmpty) {
+                    dynamicOperatorName = userName!.trim();
+                  }
+                }
+
+                // Priority F: Fallback to "Operator"
+                if (dynamicOperatorName == null || dynamicOperatorName.isEmpty) {
+                  dynamicOperatorName = 'Operator';
+                }
+
+                // 3. Capitalize and format name
+                final formattedOperator = _capitalize(dynamicOperatorName);
+                final modeName = selectedMode ?? captureProvider?.selectedMode ?? '';
+                final cleanMode = modeName.trim();
+
+                // 4. Combine dynamically with mode/nozzle
+                final String displayName;
+                if (cleanMode.isEmpty) {
+                  displayName = formattedOperator;
+                } else if (formattedOperator.toLowerCase().endsWith(cleanMode.toLowerCase())) {
+                  displayName = formattedOperator;
+                } else {
+                  displayName = '$formattedOperator $cleanMode';
+                }
+
+                return Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ) ??
+                      TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                );
+              },
+            ),
           ),
         ],
       ),

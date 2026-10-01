@@ -14,9 +14,9 @@ class AuditConfigModel {
     this.stationName = 'Main CNG Station',
     this.countdownDurationSeconds = 120,
     this.availableNozzles = const ['Nozzle 1', 'Nozzle 2', 'Nozzle 3', 'Nozzle 4'],
-    this.operatorPromptTemplate = 'Ali • Take this pic from {target}',
+    this.operatorPromptTemplate = 'Take this pic from {target}',
     this.nozzleBottomNoteTemplate =
-        'Ali • Capture snapshot from {target}, Meter, Counter & Micro Motion within 2 minutes.',
+        'Capture snapshot from {target}, Meter, Counter & Micro Motion within 2 minutes.',
     this.suiGasBottomNote =
         'Sui Gas reading requires snapshot of VB1 and VS1 within 2 minutes.',
   });
