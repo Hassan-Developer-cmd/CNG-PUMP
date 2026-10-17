@@ -39,6 +39,9 @@ class AuthStorage {
     } catch (_) {}
   }
 
+  /// Synchronous retrieval from in-memory cache
+  String? get currentToken => _inMemoryFallback[_keyToken] as String?;
+
   /// Retrieve saved JWT token
   Future<String?> getToken() async {
     try {

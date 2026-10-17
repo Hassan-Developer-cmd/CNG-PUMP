@@ -71,7 +71,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                                MaterialPageRoute(builder: (_) => const AdminHistoryScreen()),
                               );
                             },
                             icon: const Icon(
@@ -465,7 +465,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                MaterialPageRoute(builder: (_) => const AdminHistoryScreen()),
               );
             },
             style: OutlinedButton.styleFrom(

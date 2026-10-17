@@ -54,6 +54,9 @@ class ApiEndpoints {
   /// GET: Dynamic MongoDB capture sessions history feed
   static const String captureHistory = '/api/v1/capture/history';
 
+  /// GET: All capture history across all stations/operators for Super Admin / Admin
+  static const String getAllCaptureHistory = '/api/v1/capture/getAllCaptureHistory';
+
   /// POST: Multipart upload of a single captured watermarked audit image
   /// Fields: mode, imageType (e.g. "vb1", "vs1", "digitalMachine", "counter"), readingType, readingValue, timestamp
   /// Files: image

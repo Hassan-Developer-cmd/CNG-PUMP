@@ -7,6 +7,8 @@ import '../../widgets/dashboard/dashboard_bottom_nav_bar.dart';
 import '../../widgets/history/audit_history_card.dart';
 import '../../widgets/shared_widgets/custom_app_bar.dart';
 
+export 'admin_history_screen.dart';
+
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 

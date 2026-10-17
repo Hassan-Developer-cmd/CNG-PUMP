@@ -242,10 +242,91 @@ class HistoryProvider extends ChangeNotifier {
     addSession(record);
   }
 
+  // ========================================================
+  // Super Admin / Admin All Capture History State & Methods
+  // ========================================================
+  List<dynamic> allCaptureList = [];
+  bool isLoadingCaptures = false;
+  String? captureError;
+
+  /// Construct absolute network URLs for every uploaded image
+  String resolveImageUrl(String? path) => toAbsoluteImageUrl(path);
+
+  /// Helper to convert partial or relative paths to absolute backend URLs
+  static String toAbsoluteImageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final cleanPath = path.startsWith('/') ? path : '/$path';
+    return 'http://192.168.1.8:5000$cleanPath';
+  }
+
+  /// Fetches all capture history across all stations and operators for Admin / Super Admin
+  /// Target URL: GET http://192.168.1.8:5000/api/v1/capture/getAllCaptureHistory
+  Future<void> fetchAllCaptures({bool showLoading = true, http.Client? client}) async {
+    if (showLoading) {
+      isLoadingCaptures = true;
+      captureError = null;
+      notifyListeners();
+    }
+
+    try {
+      final currentRepo = _repository ??
+          (AppDependencies.isInitialized ? AppDependencies.auditRepository : null);
+      if (_httpClient == ApiClient.instance.httpClient &&
+          (currentRepo is MockAuditRepository ||
+              (AppDependencies.isInitialized && AppDependencies.useMock))) {
+        isLoadingCaptures = false;
+        captureError = null;
+        notifyListeners();
+        return;
+      }
+
+      final clientAuthToken = ApiClient.instance.authToken;
+      final token = (clientAuthToken != null && clientAuthToken.isNotEmpty)
+          ? clientAuthToken
+          : secureStorage.currentToken;
+
+      final clientToUse = client ?? _httpClient;
+      final response = await clientToUse.get(
+        Uri.parse('http://192.168.1.8:5000/api/v1/capture/getAllCaptureHistory'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = jsonDecode(response.body);
+        // Handle root array or nested key
+        final List rawItems = decoded is List
+            ? decoded
+            : (decoded['data'] ??
+                decoded['history'] ??
+                decoded['captures'] ??
+                decoded['sessions'] ??
+                []);
+
+        allCaptureList = rawItems;
+        captureError = null;
+      } else {
+        captureError = 'Failed to load records (${response.statusCode})';
+      }
+    } catch (e) {
+      captureError = 'Connection failed: $e';
+    } finally {
+      isLoadingCaptures = false;
+      notifyListeners();
+    }
+  }
+
   void clearAll() {
     historyList.clear();
     errorMessage = null;
     isLoading = false;
+    allCaptureList.clear();
+    isLoadingCaptures = false;
+    captureError = null;
     notifyListeners();
   }
 }
